@@ -1,17 +1,18 @@
 <template>
   <div class="pptist-screen">
-    <BaseView :changeViewMode="changeViewMode" v-if="viewMode === 'base'" />
-    <PresenterView :changeViewMode="changeViewMode" v-else-if="viewMode === 'presenter'" />
+    <BaseView :changeViewMode="changeViewMode" v-if="viewMode === 'base'"/>
+    <PresenterView :changeViewMode="changeViewMode" v-else-if="viewMode === 'presenter'"/>
   </div>
 </template>
 
 <script lang="ts" setup>
-import { onMounted, onUnmounted, ref } from 'vue'
-import { KEYS } from '@/configs/hotkey'
+import {onMounted, onUnmounted, ref} from 'vue'
+import {KEYS} from '@/configs/hotkey'
 import useScreening from '@/hooks/useScreening'
 
 import BaseView from './BaseView.vue'
 import PresenterView from './PresenterView.vue'
+import {getQueryParameter} from '@/utils/queryString'
 
 const viewMode = ref<'base' | 'presenter'>('base')
 
@@ -19,12 +20,13 @@ const changeViewMode = (mode: 'base' | 'presenter') => {
   viewMode.value = mode
 }
 
-const { exitScreening } = useScreening()
+const {exitScreening} = useScreening()
+const readonly = getQueryParameter('readonly')
 
 // 快捷键退出放映
 const keydownListener = (e: KeyboardEvent) => {
   const key = e.key.toUpperCase()
-  if (key === KEYS.ESC) exitScreening()
+  if (key === KEYS.ESC && !readonly) exitScreening()
 }
 
 onMounted(() => document.addEventListener('keydown', keydownListener))

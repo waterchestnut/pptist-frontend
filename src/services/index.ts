@@ -1,7 +1,7 @@
-import axios from './config'
+import axios, {getDefaultHeaders} from './config'
 
-// export const SERVER_URL = 'http://localhost:5000'
-export const SERVER_URL = (import.meta.env.MODE === 'development') ? '/api' : 'https://server.pptist.cn'
+// @ts-ignore
+export const SERVER_URL = PPTONLINE_API_BASE
 
 interface ImageSearchPayload {
   query: string;
@@ -42,13 +42,14 @@ export default {
   },
 
   AIPPT_Outline({
-    content,
-    language,
-    model,
-  }: AIPPTOutlinePayload): Promise<any> {
+                  content,
+                  language,
+                  model,
+                }: AIPPTOutlinePayload): Promise<any> {
     return fetch(`${SERVER_URL}/tools/aippt_outline`, {
       method: 'POST',
       headers: {
+        ...getDefaultHeaders(),
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -61,14 +62,15 @@ export default {
   },
 
   AIPPT({
-    content,
-    language,
-    style,
-    model,
-  }: AIPPTPayload): Promise<any> {
+          content,
+          language,
+          style,
+          model,
+        }: AIPPTPayload): Promise<any> {
     return fetch(`${SERVER_URL}/tools/aippt`, {
       method: 'POST',
       headers: {
+        ...getDefaultHeaders(),
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -82,12 +84,13 @@ export default {
   },
 
   AI_Writing({
-    content,
-    command,
-  }: AIWritingPayload): Promise<any> {
+               content,
+               command,
+             }: AIWritingPayload): Promise<any> {
     return fetch(`${SERVER_URL}/tools/ai_writing`, {
       method: 'POST',
       headers: {
+        ...getDefaultHeaders(),
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({

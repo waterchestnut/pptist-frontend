@@ -6,13 +6,13 @@
       <span class="subtite" v-else-if="step === 'outline'">确认下方内容大纲（点击编辑内容，右键添加/删除大纲项），开始选择模板</span>
       <span class="subtite" v-else>在下方输入您的PPT主题，并适当补充信息，如行业、岗位、学科、用途等</span>
     </div>
-    
+
     <template v-if="step === 'setup'">
-      <Input class="input" 
+      <Input class="input"
         ref="inputRef"
-        v-model:value="keyword" 
-        :maxlength="50" 
-        placeholder="请输入PPT主题，如：大学生职业生涯规划" 
+        v-model:value="keyword"
+        :maxlength="50"
+        placeholder="请输入PPT主题，如：大学生职业生涯规划"
         @enter="createOutline()"
       >
         <template #suffix>
@@ -26,7 +26,7 @@
       <div class="configs">
         <div class="config-item">
           <div class="label">语言：</div>
-          <Select 
+          <Select
             class="config-content"
             style="width: 80px;"
             v-model:value="language"
@@ -39,7 +39,7 @@
         </div>
         <div class="config-item">
           <div class="label">风格：</div>
-          <Select 
+          <Select
             class="config-content"
             style="width: 80px;"
             v-model:value="style"
@@ -52,9 +52,9 @@
             ]"
           />
         </div>
-        <div class="config-item">
+<!--        <div class="config-item">
           <div class="label">模型：</div>
-          <Select 
+          <Select
             class="config-content"
             style="width: 190px;"
             v-model:value="model"
@@ -63,10 +63,10 @@
               { label: 'Doubao-Seed-1.6-flash', value: 'ark-doubao-seed-1.6-flash' },
             ]"
           />
-        </div>
+        </div>-->
         <div class="config-item">
           <div class="label">配图：</div>
-          <Select 
+          <Select
             class="config-content"
             style="width: 100px;"
             v-model:value="img"
@@ -84,6 +84,18 @@
           <Checkbox v-model:value="overwrite">覆盖已有幻灯片</Checkbox>
         </div>
       </div>
+      <div class="configs">
+        <div class="config-item" style='flex-wrap: wrap'>
+          <div class="label">文本材料：</div>
+          <FileInput accept=".pdf,.doc,.docx,.xls,.xlsx,.html" @change="files => updateMaterialFile(files)">
+            <Button><IconUpload /> 上传文本材料</Button>
+          </FileInput>
+          <div class="label" style='margin-left: 12px'>{{materialFileInfo?.fileName}}</div>
+        </div>
+      </div>
+      <div class='header'>
+        <span class="subtite">AI生成PPT大纲和PPT内容时将优先参考您上传的文本材料，文本材料支持PDF、WORD、EXCEL、HTML格式的文档。</span>
+      </div>
     </template>
     <div class="preview" v-if="step === 'outline'">
       <pre ref="outlineRef" v-if="outlineCreating">{{ outline }}</pre>
@@ -97,10 +109,10 @@
     </div>
     <div class="select-template" v-if="step === 'template'">
       <div class="templates">
-        <div class="template" 
-          :class="{ 'selected': selectedTemplate === template.id }" 
-          v-for="template in templates" 
-          :key="template.id" 
+        <div class="template"
+          :class="{ 'selected': selectedTemplate === template.id }"
+          v-for="template in templates"
+          :key="template.id"
           @click="selectedTemplate = template.id"
         >
           <img :src="template.cover" :alt="template.name">
@@ -112,7 +124,7 @@
       </div>
     </div>
 
-    <FullscreenSpin :loading="loading" tip="AI生成中，请耐心等待 ..." />
+    <FullscreenSpin :loading="loading" :tip="loadingTip || 'AI生成中，请耐心等待 ...'" />
   </div>
 </template>
 
@@ -120,6 +132,7 @@
 import { ref, onMounted, useTemplateRef } from 'vue'
 import { storeToRefs } from 'pinia'
 import api from '@/services'
+import {genPPTStream, genPPTSyllabusStream} from '@/services/llm'
 import useAIPPT from '@/hooks/useAIPPT'
 import useSlideHandler from '@/hooks/useSlideHandler'
 import type { AIPPTSlide } from '@/types/AIPPT'
@@ -133,6 +146,10 @@ import Select from '@/components/Select.vue'
 import FullscreenSpin from '@/components/FullscreenSpin.vue'
 import OutlineEditor from '@/components/OutlineEditor.vue'
 import Checkbox from '@/components/Checkbox.vue'
+import FileInput from '@/components/FileInput.vue'
+import {simpleUploadFile} from '@/services/fileInfo'
+import * as pptInfoApi from '@/services/pptInfo'
+import useAIPPTPro from '@/hooks/useAIPPTPro'
 
 const mainStore = useMainStore()
 const slidesStore = useSlidesStore()
@@ -140,6 +157,7 @@ const { templates } = storeToRefs(slidesStore)
 
 const { resetSlides, isEmptySlide } = useSlideHandler()
 const { AIPPT, presetImgPool, getMdContent } = useAIPPT()
+const {AIPPTPro} = useAIPPTPro()
 
 const language = ref('中文')
 const style = ref('通用')
@@ -155,6 +173,9 @@ const model = ref('GLM-4.5-Flash')
 const outlineRef = useTemplateRef<HTMLElement>('outlineRef')
 const inputRef = useTemplateRef<InstanceType<typeof Input>>('inputRef')
 
+const loadingTip = ref('')
+const materialFileInfo = ref()
+
 const recommends = ref([
   '2025科技前沿动态',
   '大数据如何改变世界',
@@ -166,7 +187,7 @@ const recommends = ref([
   '区块链技术及其应用',
   '大学生职业生涯规划',
   '公司年会策划方案',
-]) 
+])
 
 onMounted(() => {
   setTimeout(() => {
@@ -184,14 +205,15 @@ const createOutline = async () => {
 
   loading.value = true
   outlineCreating.value = true
-  
-  const stream = await api.AIPPT_Outline({
+
+  /*const stream = await api.AIPPT_Outline({
     content: keyword.value,
     language: language.value,
     model: model.value,
-  })
+  })*/
+  const stream = await genPPTSyllabusStream(keyword.value, language.value, materialFileInfo.value)
   if (stream.status === 500) {
-    message.error('AI服务异常，请更换其他模型重试')
+    message.error('AI服务异常，请稍后重试')
     loading.value = false
     return
   }
@@ -201,16 +223,17 @@ const createOutline = async () => {
 
   const reader: ReadableStreamDefaultReader = stream.body.getReader()
   const decoder = new TextDecoder('utf-8')
-  
+
   const readStream = () => {
     reader.read().then(({ done, value }) => {
       if (done) {
         outline.value = getMdContent(outline.value)
+        //@ts-ignore
         outline.value = outline.value.replace(/<!--[\s\S]*?-->/g, '').replace(/<think>[\s\S]*?<\/think>/g, '')
         outlineCreating.value = false
         return
       }
-  
+
       const chunk = decoder.decode(value, { stream: true })
       outline.value += chunk
 
@@ -229,12 +252,13 @@ const createPPT = async (template?: { slides: Slide[], theme: SlideTheme }) => {
 
   if (overwrite.value) resetSlides()
 
-  const stream = await api.AIPPT({
+  /*const stream = await api.AIPPT({
     content: outline.value,
     language: language.value,
     style: style.value,
     model: model.value,
-  })
+  })*/
+  const stream = await genPPTStream(outline.value, language.value, style.value, materialFileInfo.value, selectedTemplate.value)
 
   if (img.value === 'test') {
     const imgs = await api.getMockData('imgs')
@@ -242,28 +266,29 @@ const createPPT = async (template?: { slides: Slide[], theme: SlideTheme }) => {
   }
 
   let templateData = template
-  if (!templateData) templateData = await api.getMockData(selectedTemplate.value)
+  if (!templateData) templateData = await pptInfoApi.getPptInfo(selectedTemplate.value)
   const templateSlides: Slide[] = templateData!.slides
   const templateTheme: SlideTheme = templateData!.theme
 
   const reader: ReadableStreamDefaultReader = stream.body.getReader()
   const decoder = new TextDecoder('utf-8')
-  
+
   const readStream = () => {
-    reader.read().then(({ done, value }) => {
+    reader.read().then(async ({ done, value }) => {
       if (done) {
         loading.value = false
         mainStore.setAIPPTDialogState(false)
         slidesStore.setTheme(templateTheme)
         return
       }
-  
+
       const chunk = decoder.decode(value, { stream: true })
       try {
         const text = chunk.replace('```json', '').replace('```', '').trim()
         if (text) {
           const slide: AIPPTSlide = JSON.parse(chunk)
-          AIPPT(templateSlides, [slide])
+          //@ts-ignore
+          templateData?.aiIndividual ? (await AIPPTPro(templateSlides, [slide])) : AIPPT(templateSlides, [slide])
         }
       }
       catch (err) {
@@ -298,6 +323,21 @@ const uploadLocalTemplate = () => {
       reader.readAsText(file)
     }
   })
+}
+
+const updateMaterialFile = async (files: FileList) => {
+  const file = files[0]
+  if (!file) return
+  loading.value = true
+  loadingTip.value = '文本材料上传中，请耐心等待 ...'
+  let fileRet:any = await simpleUploadFile(file)
+  loading.value = false
+  loadingTip.value = ''
+  if (fileRet.code !== 0) {
+    message.error(`文件上传失败 ${fileRet.msg}`)
+    return
+  }
+  materialFileInfo.value = fileRet.data
 }
 </script>
 
@@ -364,7 +404,7 @@ const uploadLocalTemplate = () => {
     margin-bottom: 10px;
     padding-right: 5px;
     @include flex-grid-layout();
-  
+
     .template {
       border: 2px solid $borderColor;
       border-radius: $borderRadius;
@@ -373,7 +413,7 @@ const uploadLocalTemplate = () => {
       &.selected {
         border-color: $themeColor;
       }
-  
+
       img {
         width: 100%;
         min-height: 180px;

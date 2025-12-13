@@ -72,6 +72,7 @@ import SlideThumbnails from './SlideThumbnails.vue'
 import WritingBoardTool from './WritingBoardTool.vue'
 import CountdownTimer from './CountdownTimer.vue'
 import BottomThumbnails from './BottomThumbnails.vue'
+import {getQueryParameter} from '@/utils/queryString'
 
 const props = defineProps<{
   changeViewMode: (mode: 'base' | 'presenter') => void
@@ -109,9 +110,10 @@ const timerlVisible = ref(false)
 const slideThumbnailModelVisible = ref(false)
 const bottomThumbnailsVisible = ref(false)
 const laserPen = ref(false)
+const readonly = getQueryParameter('readonly')
 
-const contextmenus = (): ContextmenuItem[] => {
-  return [
+const contextmenus = (): ContextmenuItem[]|null => {
+  return readonly ? null : [
     {
       text: '上一页',
       subText: '↑ ←',

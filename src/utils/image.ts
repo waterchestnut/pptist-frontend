@@ -1,3 +1,5 @@
+import {uploadMyResInfo} from '@/services/resInfo'
+
 interface ImageSize {
   width: number
   height: number
@@ -38,13 +40,14 @@ export const getImageSize = (src: string): Promise<ImageSize> => {
  * @param file 图片文件
  */
 export const getImageDataURL = (file: File): Promise<string> => {
-  return new Promise(resolve => {
+  /*return new Promise(resolve => {
     const reader = new FileReader()
     reader.addEventListener('load', () => {
       resolve(reader.result as string)
     })
     reader.readAsDataURL(file)
-  })
+  })*/
+  return uploadMyResInfo(file)
 }
 
 /**

@@ -44,6 +44,7 @@ import { storeToRefs } from 'pinia'
 import { useSlidesStore } from '@/store'
 import type { Slide } from '@/types/slides'
 import api from '@/services'
+import * as pptInfoApi from '@/services/pptInfo'
 
 import ThumbnailSlide from '@/views/components/ThumbnailSlide/index.vue'
 import Button from '@/components/Button.vue'
@@ -85,7 +86,7 @@ const insertTemplates = (slides: Slide[]) => {
 const changeCatalog = (id: string) => {
   loading.value = true
   activeCatalog.value = id
-  api.getMockData(activeCatalog.value).then(ret => {
+  pptInfoApi.getPptInfo(activeCatalog.value).then(ret => {
     slides.value = ret.slides
     loading.value = false
 
@@ -102,13 +103,13 @@ onMounted(() => {
 
 <style lang="scss" scoped>
 .templates {
-  width: 500px;
+  width: 550px;
   height: 500px;
   display: flex;
   user-select: none;
 }
 .catalogs {
-  width: 108px;
+  width: 158px;
   margin-right: 10px;
   padding-right: 10px;
   border-right: 1px solid $borderColor;

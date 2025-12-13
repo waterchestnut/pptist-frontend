@@ -542,5 +542,7 @@ export default () => {
     AIPPT,
     getMdContent,
     getJSONContent,
+    checkTextType,
+    getNewTextElement,
   }
 }

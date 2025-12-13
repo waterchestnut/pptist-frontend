@@ -42,6 +42,7 @@ import Tabs from '@/components/Tabs.vue'
 import Input from '@/components/Input.vue'
 import Button from '@/components/Button.vue'
 import FileInput from '@/components/FileInput.vue'
+import {uploadMyResInfo} from '@/services/resInfo'
 
 type TypeKey = 'video' | 'audio'
 interface TabItem {
@@ -75,18 +76,20 @@ const insertAudio = () => {
   emit('insertAudio', { src: audioSrc.value })
 }
 
-const uploadVideo = (files: FileList) => {
+const uploadVideo = async (files: FileList) => {
   const file = files[0]
   if (!file) return
   const ext = MIME_MAP[file.type] || ''
-  emit('insertVideo', { src: URL.createObjectURL(file), ext })
+  let src = await uploadMyResInfo(file)
+  emit('insertVideo', { src: src, ext })
 }
 
-const uploadAudio = (files: FileList) => {
+const uploadAudio = async (files: FileList) => {
   const file = files[0]
   if (!file) return
   const ext = MIME_MAP[file.type] || ''
-  emit('insertAudio', { src: URL.createObjectURL(file), ext })
+  let src = await uploadMyResInfo(file)
+  emit('insertAudio', { src: src, ext })
 }
 </script>
 
