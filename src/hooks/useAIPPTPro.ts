@@ -40,7 +40,9 @@ const getTmplItems = (tmplSlide?: Slide) => {
     if (groupId) {
       itemInfo = items.find((_: any) => _.groupId === groupId)
     }
-    if (element.type === 'text' && ['item', 'itemTitle', 'itemNumber'].includes(element.textType || '')) {
+    // @ts-ignore
+    let textType = element.textType || element.text?.type
+    if ((element.type === 'text' || element.type === 'shape') && ['item', 'itemTitle', 'itemNumber'].includes(textType)) {
       if (!itemInfo) {
         itemInfo = {}
         if (groupId) {
@@ -48,7 +50,7 @@ const getTmplItems = (tmplSlide?: Slide) => {
         }
         items.push(itemInfo)
       }
-      itemInfo[element.textType || 'item'] = element
+      itemInfo[textType] = element
     }
     if (element.type === 'image' && ['itemFigure'].includes(element.imageType || '')) {
       if (!itemInfo) {
