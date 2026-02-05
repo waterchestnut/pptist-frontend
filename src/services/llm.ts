@@ -1,4 +1,4 @@
-import axios, {getDefaultHeaders} from './config'
+import axios, {getDefaultHeaders} from './axios'
 
 // @ts-ignore
 export const SERVER_URL = PPTONLINE_API_BASE

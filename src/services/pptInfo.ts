@@ -1,4 +1,4 @@
-import axios from './config'
+import axios from './axios'
 import {getDocHttpUrl} from '@/utils/util'
 
 // @ts-ignore

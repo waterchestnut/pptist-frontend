@@ -1,4 +1,4 @@
-import axios, {getDefaultHeaders} from './config'
+import axios, {getDefaultHeaders} from './axios'
 import fetchRequest from './fetch'
 
 // @ts-ignore

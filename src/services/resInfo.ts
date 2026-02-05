@@ -4,7 +4,7 @@
  * @module
  */
 
-import axios from './config'
+import axios from './axios'
 import {calcHashCode, uuidV4} from '@/utils/util'
 import {simpleUploadFile, simpleUploadFileUnique} from '@/services/fileInfo'
 

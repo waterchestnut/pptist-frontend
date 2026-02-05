@@ -110,7 +110,8 @@
         <i-icon-park-outline:download class="icon" />
       </div>
       <div class="menu-item" v-tooltip="'保存'" @click="save">
-        <span>保存</span>
+        <i-icon-park-outline:save class="icon" />
+        <span style='margin-left: 3px'>保存</span>
       </div>
       <a class="github-link" v-tooltip="'Copyright © 2020-PRESENT pipipi-pikachu'" href="https://github.com/pipipi-pikachu/PPTist" target="_blank">
         <div class="menu-item"><i-icon-park-outline:github class="icon" /></div>

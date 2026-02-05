@@ -1,4 +1,4 @@
-import axios from './config'
+import axios from './axios'
 
 // @ts-ignore
 export const SERVER_URL = DOC_API_BASE

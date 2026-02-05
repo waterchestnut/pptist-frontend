@@ -1,4 +1,4 @@
-import axios from './config'
+import axios from './axios'
 import {setUserCache} from '@/utils/authority'
 
 // @ts-ignore

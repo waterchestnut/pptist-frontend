@@ -300,14 +300,14 @@ const createPPT = async (template?: { slides: Slide[], theme: SlideTheme }) => {
       const lines = chunk.split(/\n+/)
 
       for (const line of lines) {
-        if (line) processChunk(line)
+        if (line) await processChunk(line)
       }
 
       readStream()
     })
   }
 
-  const processChunk = (chunk: string) => {
+  const processChunk = async (chunk: string) => {
     try {
       const text = chunk.replace('```jsonl', '').replace('```json', '').replace('```', '').trim()
       if (text) {
