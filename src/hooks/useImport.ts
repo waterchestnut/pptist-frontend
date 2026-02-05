@@ -26,10 +26,124 @@ import type {
 } from '@/types/slides'
 import {uploadFromDataUrl} from '@/services/resInfo'
 
-const convertFontSizePtToPx = (html: string, ratio: number) => {
+const shapeVAlignMap: Record<string, ShapeTextAlign> = {
+  'mid': 'middle',
+  'down': 'bottom',
+  'up': 'top',
+}
+
+const convertTextContent = (html: string, ratio: number) => {
   return html.replace(/font-size:\s*([\d.]+)pt/g, (match, p1) => {
-    return `font-size: ${(parseFloat(p1) * ratio).toFixed(1)}px`
-  })
+    return `font-size: ${Math.floor(parseFloat(p1) * ratio)}px`
+  }).replace(/&nbsp;/g, ' ')
+}
+
+const getMaxFontSize = (html: string, defaultFontSize: number = 18): number => {
+  const fontSizeRegex = /font-size\s*:\s*(\d+(?:\.\d+)?)\s*pt/gi
+  const fontSizes = [defaultFontSize]
+
+  let match
+  while ((match = fontSizeRegex.exec(html)) !== null) {
+    const size = parseFloat(match[1])
+    if (size > 0) fontSizes.push(size)
+  }
+
+  return Math.max(...fontSizes)
+}
+
+const getParagraphMetrics = (html: string, ratio: number) => {
+  const tagRegex = /<(div|p|li)(?![a-z0-9])[^>]*>/gi
+
+  const lineHeights = []
+  const margins = []
+  let paragraphCount = 0
+
+  let match
+  let paragraphIndex = 0
+  while ((match = tagRegex.exec(html)) !== null) {
+    const fullTag = match[0]
+    paragraphCount++
+
+    const styleRegex = /\bstyle\s*=\s*(['"])(.*?)\1/i
+    const styleMatch = fullTag.match(styleRegex)
+
+    let styleContent = ''
+    if (styleMatch && styleMatch[2]) {
+      styleContent = styleMatch[2]
+    }
+
+    const getProp = (propName: string) => {
+      if (!styleContent) return null
+      const propRegex = new RegExp(`${propName}\\s*:\\s*([^;]+)`, 'i')
+      const propMatch = styleContent.match(propRegex)
+      return propMatch ? propMatch[1].trim() : null
+    }
+
+    const marginTop = getProp('margin-top')
+    const marginBottom = getProp('margin-bottom')
+    const lineHeight = getProp('line-height')
+
+    const tagStartIndex = match.index
+    const tagName = match[1]
+    let tagEndIndex = html.indexOf('</' + tagName + '>', tagStartIndex)
+    if (tagEndIndex === -1) tagEndIndex = tagStartIndex + fullTag.length
+
+    const paragraphHtml = html.substring(tagStartIndex, tagEndIndex)
+    const maxFontSize = getMaxFontSize(paragraphHtml, 18)
+
+    let lineHeightValue = 1
+    if (lineHeight) {
+      if (lineHeight.indexOf('pt') !== -1) {
+        lineHeightValue = parseFloat(lineHeight.replace('pt', '')) / maxFontSize
+      }
+      else {
+        lineHeightValue = parseFloat(lineHeight)
+      }
+    }
+    lineHeights.push(lineHeightValue)
+
+    const isFirstParagraph = paragraphIndex === 0
+    const isLastParagraph = match.index + fullTag.length >= html.lastIndexOf('</' + tagName + '>')
+
+    if (marginTop && !isFirstParagraph) {
+      let marginTopValue = 0
+      if (marginTop.indexOf('pt') !== -1) {
+        marginTopValue = parseFloat(marginTop.replace('pt', ''))
+      }
+      else if (marginTop.indexOf('em') !== -1) {
+        marginTopValue = parseFloat(marginTop.replace('em', '')) * maxFontSize
+      }
+      if (marginTopValue > 0) margins.push(marginTopValue)
+    }
+
+    if (marginBottom && !isLastParagraph) {
+      let marginBottomValue = 0
+      if (marginBottom.indexOf('pt') !== -1) {
+        marginBottomValue = parseFloat(marginBottom.replace('pt', ''))
+      }
+      else if (marginBottom.indexOf('em') !== -1) {
+        marginBottomValue = parseFloat(marginBottom.replace('em', '')) * maxFontSize
+      }
+      if (marginBottomValue > 0) margins.push(marginBottomValue)
+    }
+
+    paragraphIndex++
+  }
+
+  let lineHeight = 1
+  if (lineHeights.length) {
+    lineHeight = +(lineHeights.reduce((sum, height) => sum + height, 0) / paragraphCount).toFixed(2)
+  }
+
+  let margin = 0
+  if (margins.length && paragraphCount > 1) {
+    margin = margins.reduce((sum, margin) => sum + margin, 0) / (paragraphCount - 1)
+  }
+
+  return {
+    lineHeight,
+    margin: margin ? +(margin * ratio).toFixed(1) : null,
+  }
 }
 
 export default () => {
@@ -49,13 +163,14 @@ export default () => {
     const reader = new FileReader()
     reader.addEventListener('load', () => {
       try {
-        const {slides} = JSON.parse(reader.result as string)
+        const { slides, theme } = JSON.parse(reader.result as string)
         if (cover) {
           slidesStore.updateSlideIndex(0)
-          slidesStore.setSlides(slides)
+          slidesStore.setSlides(slides, (theme || {}))
           addHistorySnapshot()
-        } else if (isEmptySlide.value) {
-          slidesStore.setSlides(slides)
+        }
+        else if (isEmptySlide.value) {
+          slidesStore.setSlides(slides, (theme || {}))
           addHistorySnapshot()
         } else addSlidesFromData(slides)
       } catch {
@@ -72,13 +187,14 @@ export default () => {
     const reader = new FileReader()
     reader.addEventListener('load', () => {
       try {
-        const {slides} = JSON.parse(decrypt(reader.result as string))
+        const { slides, theme } = JSON.parse(decrypt(reader.result as string))
         if (cover) {
           slidesStore.updateSlideIndex(0)
-          slidesStore.setSlides(slides)
+          slidesStore.setSlides(slides, (theme || {}))
           addHistorySnapshot()
-        } else if (isEmptySlide.value) {
-          slidesStore.setSlides(slides)
+        }
+        else if (isEmptySlide.value) {
+          slidesStore.setSlides(slides, (theme || {}))
           addHistorySnapshot()
         } else addSlidesFromData(slides)
       } catch {
@@ -212,29 +328,51 @@ export default () => {
   }
 
   const calculateRotatedPosition = (
-    x: number,
-    y: number,
-    w: number,
-    h: number,
-    ox: number,
-    oy: number,
-    k: number,
+    ax: number, // A 的 x
+    ay: number, // A 的 y
+    aw: number, // A 的宽
+    ah: number, // A 的高
+    bx: number, // B 相对 A 的 x (ox)
+    by: number, // B 相对 A 的 y (oy)
+    bw: number, // B 的宽
+    bh: number, // B 的高
+    ak: number, // A 的旋转角度（度，正顺时针）
+    bk: number, // B 的旋转角度（度，正顺时针）
   ) => {
-    const radians = k * (Math.PI / 180)
+    const aRadians = ak * (Math.PI / 180)
+    const aCos = Math.cos(aRadians)
+    const aSin = Math.sin(aRadians)
 
-    const containerCenterX = x + w / 2
-    const containerCenterY = y + h / 2
+    const aCenterX = ax + aw / 2
+    const aCenterY = ay + ah / 2
 
-    const relativeX = ox - w / 2
-    const relativeY = oy - h / 2
+    const corners = [
+      { ox: bx, oy: by },
+      { ox: bx + bw, oy: by },
+      { ox: bx + bw, oy: by + bh },
+      { ox: bx, oy: by + bh },
+    ]
 
-    const rotatedX = relativeX * Math.cos(radians) + relativeY * Math.sin(radians)
-    const rotatedY = -relativeX * Math.sin(radians) + relativeY * Math.cos(radians)
+    let minX = Infinity
+    let minY = Infinity
 
-    const graphicX = containerCenterX + rotatedX
-    const graphicY = containerCenterY + rotatedY
+    for (const corner of corners) {
+      const relativeX = corner.ox - aw / 2
+      const relativeY = corner.oy - ah / 2
 
-    return {x: graphicX, y: graphicY}
+      const rotatedX = relativeX * aCos + relativeY * aSin
+      const rotatedY = -relativeX * aSin + relativeY * aCos
+
+      const graphicX = aCenterX + rotatedX
+      const graphicY = aCenterY + rotatedY
+
+      minX = Math.min(minX, graphicX)
+      minY = Math.min(minY, graphicY)
+    }
+
+    const globalRotation = (bk + ak) % 360
+
+    return { x: minX, y: minY, globalRotation }
   }
 
   // 导入PPTX文件
@@ -305,7 +443,14 @@ export default () => {
               rotate: value.rot + 90,
             },
           }
-        } else {
+        }
+        else if (type === 'pattern') {
+          background = {
+            type: 'solid',
+            color: '#fff',
+          }
+        }
+        else {
           background = {
             type: 'solid',
             color: value || '#fff',
@@ -334,36 +479,74 @@ export default () => {
             el.top = el.top * ratio
 
             if (el.type === 'text') {
-              const textEl: PPTTextElement = {
-                type: 'text',
-                id: nanoid(10),
-                width: el.width,
-                height: el.height,
-                left: el.left,
-                top: el.top,
-                rotate: el.rotate,
-                defaultFontName: theme.value.fontName,
-                defaultColor: theme.value.fontColor,
-                content: convertFontSizePtToPx(el.content, ratio),
-                lineHeight: 1,
-                outline: {
-                  color: el.borderColor,
-                  width: +(el.borderWidth * ratio).toFixed(2),
-                  style: el.borderType,
-                },
-                fill: el.fill.type === 'color' ? el.fill.value : '',
-                vertical: el.isVertical,
-              }
-              if (el.shadow) {
-                textEl.shadow = {
-                  h: el.shadow.h * ratio,
-                  v: el.shadow.v * ratio,
-                  blur: el.shadow.blur * ratio,
-                  color: el.shadow.color,
+              if (el.autoFit && el.autoFit.type === 'text') {
+                const fontScale = ratio * (el.autoFit.fontScale || 100) / 100
+                const metrics = getParagraphMetrics(el.content, fontScale)
+                const shapeEl: PPTShapeElement = {
+                  type: 'shape',
+                  id: nanoid(10),
+                  width: el.width,
+                  height: el.height,
+                  left: el.left,
+                  top: el.top,
+                  rotate: el.rotate,
+                  viewBox: [200, 200],
+                  path: 'M 0 0 L 200 0 L 200 200 L 0 200 Z',
+                  fill: el.fill.type === 'color' ? el.fill.value : '',
+                  fixedRatio: false,
+                  outline: {
+                    color: el.borderColor,
+                    width: +(el.borderWidth * ratio).toFixed(2),
+                    style: el.borderType,
+                  },
+                  text: {
+                    content: convertTextContent(el.content, fontScale),
+                    defaultFontName: theme.value.fontName,
+                    defaultColor: theme.value.fontColor,
+                    align: shapeVAlignMap[el.vAlign] || 'middle',
+                    lineHeight: 1,
+                  },
                 }
+                if (metrics.lineHeight) shapeEl.text!.lineHeight = metrics.lineHeight
+                if (metrics.margin) shapeEl.text!.paragraphSpace = metrics.margin
+                slide.elements.push(shapeEl)
               }
-              slide.elements.push(textEl)
-            } else if (el.type === 'image') {
+              else {
+                const metrics = getParagraphMetrics(el.content, ratio)
+                const textEl: PPTTextElement = {
+                  type: 'text',
+                  id: nanoid(10),
+                  width: el.width,
+                  height: el.height,
+                  left: el.left,
+                  top: el.top,
+                  rotate: el.rotate,
+                  defaultFontName: theme.value.fontName,
+                  defaultColor: theme.value.fontColor,
+                  content: convertTextContent(el.content, ratio),
+                  lineHeight: 1,
+                  outline: {
+                    color: el.borderColor,
+                    width: +(el.borderWidth * ratio).toFixed(2),
+                    style: el.borderType,
+                  },
+                  fill: el.fill.type === 'color' ? el.fill.value : '',
+                  vertical: el.isVertical,
+                }
+                if (el.shadow) {
+                  textEl.shadow = {
+                    h: el.shadow.h * ratio,
+                    v: el.shadow.v * ratio,
+                    blur: el.shadow.blur * ratio,
+                    color: el.shadow.color,
+                  }
+                }
+                slide.elements.push(textEl)
+                if (metrics.lineHeight) textEl.lineHeight = metrics.lineHeight
+                if (metrics.margin) textEl.paragraphSpace = metrics.margin
+              }
+            }
+            else if (el.type === 'image') {
               const element: PPTImageElement = {
                 type: 'image',
                 id: nanoid(10),
@@ -384,10 +567,14 @@ export default () => {
                   style: el.borderType,
                 }
               }
-              const clipShapeTypes = ['roundRect', 'ellipse', 'triangle', 'rhombus', 'pentagon', 'hexagon', 'heptagon', 'octagon', 'parallelogram', 'trapezoid']
+              const clipShapeTypes = ['rect', 'roundRect', 'ellipse', 'triangle', 'rhombus', 'pentagon', 'hexagon', 'heptagon', 'octagon', 'parallelogram', 'trapezoid']
+              let geom = el.geom || 'rect'
+              if (geom.indexOf('custom:') !== -1) geom = geom.replace('custom:', '')
+              if (!clipShapeTypes.includes(geom)) geom = 'rect'
+
               if (el.rect) {
                 element.clip = {
-                  shape: (el.geom && clipShapeTypes.includes(el.geom)) ? el.geom : 'rect',
+                  shape: geom,
                   range: [
                     [
                       el.rect.l || 0,
@@ -399,9 +586,10 @@ export default () => {
                     ],
                   ]
                 }
-              } else if (el.geom && clipShapeTypes.includes(el.geom)) {
+              }
+              else if (el.geom) {
                 element.clip = {
-                  shape: el.geom,
+                  shape: geom,
                   range: [[0, 0], [100, 100]]
                 }
               }
@@ -445,18 +633,13 @@ export default () => {
                 rotate: 0,
                 autoplay: false,
               })
-            } else if (el.type === 'shape') {
-              if (el.shapType === 'line' || /Connector/.test(el.shapType)) {
+            }
+            else if (el.type === 'shape') {
+              if (el.shapType === 'line' || /straightConnector/.test(el.shapType) || /bentConnector/.test(el.shapType) || /curvedConnector/.test(el.shapType)) {
                 const lineElement = parseLineElement(el, ratio)
                 slide.elements.push(lineElement)
               } else {
                 const shape = shapeList.find(item => item.pptxShapeType === el.shapType)
-
-                const vAlignMap: { [key: string]: ShapeTextAlign } = {
-                  'mid': 'middle',
-                  'down': 'bottom',
-                  'up': 'top',
-                }
 
                 const gradient: Gradient | undefined = el.fill?.type === 'gradient' ? {
                   type: el.fill.value.path === 'line' ? 'linear' : 'radial',
@@ -470,6 +653,8 @@ export default () => {
                 const pattern: string | undefined = el.fill?.type === 'image' ? (await uploadFromDataUrl(el.fill.value.picBase64)) : undefined
 
                 const fill = el.fill?.type === 'color' ? el.fill.value : ''
+
+                const metrics = getParagraphMetrics(el.content, ratio)
 
                 const element: PPTShapeElement = {
                   type: 'shape',
@@ -491,14 +676,17 @@ export default () => {
                     style: el.borderType,
                   },
                   text: {
-                    content: convertFontSizePtToPx(el.content, ratio),
+                    content: convertTextContent(el.content, ratio),
                     defaultFontName: theme.value.fontName,
                     defaultColor: theme.value.fontColor,
-                    align: vAlignMap[el.vAlign] || 'middle',
+                    align: shapeVAlignMap[el.vAlign] || 'middle',
                   },
                   flipH: el.isFlipH,
                   flipV: el.isFlipV,
                 }
+                if (metrics.lineHeight) element.text!.lineHeight = metrics.lineHeight
+                if (metrics.margin) element.text!.paragraphSpace = metrics.margin
+
                 if (el.shadow) {
                   element.shadow = {
                     h: el.shadow.h * ratio,
@@ -518,9 +706,79 @@ export default () => {
 
                     const pathFormula = SHAPE_PATH_FORMULAS[shape.pathFormula]
                     if ('editable' in pathFormula && pathFormula.editable) {
-                      element.path = pathFormula.formula(el.width, el.height, pathFormula.defaultValue)
-                      element.keypoints = pathFormula.defaultValue
-                    } else element.path = pathFormula.formula(el.width, el.height)
+                      let keypointValues = pathFormula.defaultValue
+                      if (el.keypoints) {
+                        let keypoint = 0
+                        if (el.shapType === 'roundRect') {
+                          const val = el.keypoints.adj === undefined ? 0.334 : el.keypoints.adj
+                          keypoint = val * 0.5
+                        }
+                        if (el.shapType === 'snip1Rect') {
+                          const val = el.keypoints.adj === undefined ? 0.334 : el.keypoints.adj
+                          keypoint = val * 0.5
+                        }
+                        if (el.shapType === 'snip2SameRect') {
+                          const val = el.keypoints.adj1 === undefined ? 0.334 : el.keypoints.adj1
+                          keypoint = val * 0.5
+                        }
+                        if (el.shapType === 'snip2DiagRect') {
+                          const val = el.keypoints.adj2 === undefined ? 0.334 : el.keypoints.adj2
+                          keypoint = val * 0.5
+                        }
+                        if (el.shapType === 'snipRoundRect') {
+                          const val1 = el.keypoints.adj1 === undefined ? 0.334 : el.keypoints.adj1
+                          const val2 = el.keypoints.adj2 === undefined ? 0.334 : el.keypoints.adj2
+                          keypoint = ((val1 + val2) / 2) * 0.5
+                        }
+                        if (el.shapType === 'round1Rect') {
+                          const val = el.keypoints.adj === undefined ? 0.334 : el.keypoints.adj
+                          keypoint = val * 0.5
+                        }
+                        if (el.shapType === 'round2SameRect') {
+                          const val = el.keypoints.adj1 === undefined ? 0.334 : el.keypoints.adj1
+                          keypoint = val * 0.5
+                        }
+                        if (el.shapType === 'round2DiagRect') {
+                          const val = el.keypoints.adj1 === undefined ? 0.334 : el.keypoints.adj1
+                          keypoint = val * 0.5
+                        }
+                        if (el.shapType === 'triangle') {
+                          const val = el.keypoints.adj === undefined ? 1 : el.keypoints.adj
+                          keypoint = val * 0.5
+                        }
+                        if (el.shapType === 'trapezoid') {
+                          const val = el.keypoints.adj === undefined ? 0.5 : el.keypoints.adj
+                          keypoint = val * 0.5
+                        }
+                        if (el.shapType === 'frame') {
+                          const val = el.keypoints.adj1 === undefined ? 0.25 : el.keypoints.adj1
+                          keypoint = val * 0.5
+                        }
+                        if (el.shapType === 'corner') {
+                          const val1 = el.keypoints.adj1 === undefined ? 1 : el.keypoints.adj1
+                          const val2 = el.keypoints.adj2 === undefined ? 1 : el.keypoints.adj2
+                          keypoint = ((val1 + val2) / 2) * 0.5
+                        }
+                        if (el.shapType === 'diagStripe') {
+                          const val = el.keypoints.adj === undefined ? 1 : el.keypoints.adj
+                          keypoint = val * 0.5
+                        }
+                        if (el.shapType === 'donut') {
+                          const val = el.keypoints.adj === undefined ? 0.5 : el.keypoints.adj
+                          keypoint = val * 0.5
+                        }
+                        if (el.shapType === 'plus') {
+                          const val = el.keypoints.adj === undefined ? 0.5 : el.keypoints.adj
+                          keypoint = 1 - val
+                        }
+                        if (pathFormula.range && keypoint < pathFormula.range[0][0]) keypoint = pathFormula.range[0][0]
+                        if (pathFormula.range && keypoint > pathFormula.range[0][1]) keypoint = pathFormula.range[0][1]
+                        keypointValues = [keypoint]
+                      }
+                      element.path = pathFormula.formula(el.width, el.height, keypointValues)
+                      element.keypoints = keypointValues
+                    }
+                    else element.path = pathFormula.formula(el.width, el.height)
                   }
                 } else if (el.path && el.path.indexOf('NaN') === -1) {
                   const {maxX, maxY} = getSvgPathRange(el.path)
@@ -547,8 +805,8 @@ export default () => {
                     element.viewBox = [maxY * originWidth / originHeight, maxY]
                   }
                 }
-
-                if (element.path) slide.elements.push(element)
+    
+                if (element.path && element.viewBox[0] && element.viewBox[1]) slide.elements.push(element)
               }
             } else if (el.type === 'table') {
               const row = el.data.length
@@ -704,13 +962,25 @@ export default () => {
                 let left = _el.left + originLeft
                 let top = _el.top + originTop
 
+                let rotate = 0
+                if ('rotate' in _el) rotate = _el.rotate
+
                 if (el.rotate) {
-                  const {
-                    x,
-                    y
-                  } = calculateRotatedPosition(originLeft, originTop, originWidth, originHeight, _el.left, _el.top, el.rotate)
+                  const { x, y, globalRotation } = calculateRotatedPosition(
+                    originLeft,
+                    originTop,
+                    originWidth,
+                    originHeight,
+                    _el.left,
+                    _el.top,
+                    _el.width,
+                    _el.height,
+                    el.rotate,
+                    rotate
+                  )
                   left = x
                   top = y
+                  rotate = globalRotation
                 }
 
                 const element = {
@@ -720,6 +990,7 @@ export default () => {
                 }
                 if (el.isFlipH && 'isFlipH' in element) element.isFlipH = true
                 if (el.isFlipV && 'isFlipV' in element) element.isFlipV = true
+                if ('rotate' in element && el.rotate) element.rotate = rotate
 
                 return element
               })

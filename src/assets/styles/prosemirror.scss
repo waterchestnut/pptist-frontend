@@ -2,7 +2,8 @@
   outline: 0;
   border: 0;
   font-size: 16px;
-  word-break: break-word;
+  overflow-wrap: break-word;
+  word-break: normal;
   white-space: normal;
 
   &:not(.ProseMirror-static) {

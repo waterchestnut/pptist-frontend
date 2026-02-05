@@ -25,6 +25,7 @@
           color: elementInfo.defaultColor,
           fontFamily: elementInfo.defaultFontName,
           writingMode: elementInfo.vertical ? 'vertical-rl' : 'horizontal-tb',
+          '--paragraphSpace': `${elementInfo.paragraphSpace === undefined ? 5 : elementInfo.paragraphSpace}px`,
         }"
       >
         <ElementOutline
@@ -35,9 +36,6 @@
         <div 
           class="text ProseMirror-static" 
           :class="{ 'thumbnail': target === 'thumbnail' }"
-          :style="{
-            '--paragraphSpace': `${elementInfo.paragraphSpace === undefined ? 5 : elementInfo.paragraphSpace}px`,
-          }"
           v-html="elementInfo.content"
         ></div>
       </div>
@@ -74,6 +72,7 @@ const { shadowStyle } = useElementShadow(shadow)
   padding: 10px;
   line-height: 1.5;
   word-break: break-word;
+  font-family: $textElementFont;
 
   .text {
     position: relative;

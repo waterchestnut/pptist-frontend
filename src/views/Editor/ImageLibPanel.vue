@@ -28,11 +28,11 @@
                   @click="setOrientation(item.key); orientationVisible = false"
                 >{{ item.label }}</PopoverMenuItem>
               </template>
-              <div class="search-orientation">{{ orientationMap[orientation] }} <IconDown :size="14" /></div>
+              <div class="search-orientation">{{ orientationMap[orientation] }} <i-icon-park-outline:down style="margin-left: 4px;" /></div>
             </Popover>
           </template>
           <template #suffix>
-            <div class="search-btn" @click="search()"><IconSearch /></div>
+            <div class="search-btn" @click="search()"><i-icon-park-outline:search /></div>
           </template>
         </Input>
       </div>
@@ -101,7 +101,7 @@ const orientationOptions: {
   { key: 'portrait', label: '纵向' },
   { key: 'square', label: '方形' },
 ]
-const orientationMap: { [key: string]: string } = {
+const orientationMap: Record<string, string> = {
   'all': '全部',
   'landscape': '横向',
   'portrait': '纵向',
@@ -190,6 +190,8 @@ const loadMore = () => {
 .search-orientation {
   color: #999;
   padding-left: 5px;
+  display: flex;
+  align-items: center;
   cursor: pointer;
 }
 .search-btn {

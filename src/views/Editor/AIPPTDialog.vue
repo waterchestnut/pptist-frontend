@@ -6,18 +6,18 @@
       <span class="subtite" v-else-if="step === 'outline'">确认下方内容大纲（点击编辑内容，右键添加/删除大纲项），开始选择模板</span>
       <span class="subtite" v-else>在下方输入您的PPT主题，并适当补充信息，如行业、岗位、学科、用途等</span>
     </div>
-
+    
     <template v-if="step === 'setup'">
-      <Input class="input"
+      <Input class="input" 
         ref="inputRef"
-        v-model:value="keyword"
-        :maxlength="50"
-        placeholder="请输入PPT主题，如：大学生职业生涯规划"
+        v-model:value="keyword" 
+        :maxlength="50" 
+        placeholder="请输入PPT主题，如：大学生职业生涯规划" 
         @enter="createOutline()"
       >
         <template #suffix>
           <span class="count">{{ keyword.length }} / 50</span>
-          <div class="submit" type="primary" @click="createOutline()"><IconSend class="icon" /> AI 生成</div>
+          <div class="submit" type="primary" @click="createOutline()"><i-icon-park-outline:send class="icon" /> AI 生成</div>
         </template>
       </Input>
       <div class="recommends">
@@ -26,7 +26,7 @@
       <div class="configs">
         <div class="config-item">
           <div class="label">语言：</div>
-          <Select
+          <Select 
             class="config-content"
             style="width: 80px;"
             v-model:value="language"
@@ -39,7 +39,7 @@
         </div>
         <div class="config-item">
           <div class="label">风格：</div>
-          <Select
+          <Select 
             class="config-content"
             style="width: 80px;"
             v-model:value="style"
@@ -59,14 +59,14 @@
             style="width: 190px;"
             v-model:value="model"
             :options="[
-              { label: 'GLM-4.5-Flash', value: 'GLM-4.5-Flash' },
-              { label: 'Doubao-Seed-1.6-flash', value: 'ark-doubao-seed-1.6-flash' },
+              { label: 'GLM-4.7-Flash', value: 'glm-4.7-flash' },
+              { label: 'Doubao-Seed-1.6-Flash', value: 'doubao-seed-1.6-flash' },
             ]"
           />
         </div>-->
         <div class="config-item">
           <div class="label">配图：</div>
-          <Select
+          <Select 
             class="config-content"
             style="width: 100px;"
             v-model:value="img"
@@ -109,10 +109,10 @@
     </div>
     <div class="select-template" v-if="step === 'template'">
       <div class="templates">
-        <div class="template"
-          :class="{ 'selected': selectedTemplate === template.id }"
-          v-for="template in templates"
-          :key="template.id"
+        <div class="template" 
+          :class="{ 'selected': selectedTemplate === template.id }" 
+          v-for="template in templates" 
+          :key="template.id" 
           @click="selectedTemplate = template.id"
         >
           <img :src="template.cover" :alt="template.name">
@@ -131,6 +131,7 @@
 <script lang="ts" setup>
 import { ref, onMounted, useTemplateRef } from 'vue'
 import { storeToRefs } from 'pinia'
+import { jsonrepair } from 'jsonrepair'
 import api from '@/services'
 import {genPPTStream, genPPTSyllabusStream} from '@/services/llm'
 import useAIPPT from '@/hooks/useAIPPT'
@@ -169,7 +170,7 @@ const loading = ref(false)
 const outlineCreating = ref(false)
 const overwrite = ref(true)
 const step = ref<'setup' | 'outline' | 'template'>('setup')
-const model = ref('GLM-4.5-Flash')
+const model = ref('glm-4.7-flash')
 const outlineRef = useTemplateRef<HTMLElement>('outlineRef')
 const inputRef = useTemplateRef<InstanceType<typeof Input>>('inputRef')
 
@@ -187,7 +188,7 @@ const recommends = ref([
   '区块链技术及其应用',
   '大学生职业生涯规划',
   '公司年会策划方案',
-])
+]) 
 
 onMounted(() => {
   setTimeout(() => {
@@ -213,9 +214,12 @@ const createOutline = async () => {
   })*/
   const stream = await genPPTSyllabusStream(keyword.value, language.value, materialFileInfo.value)
   if (stream.status === 500) {
-    message.error('AI服务异常，请稍后重试')
     loading.value = false
-    return
+    return message.error('AI服务异常，请稍后重试')
+  }
+  if (typeof stream === 'object' && stream.state === -1) {
+    loading.value = false
+    return message.error('该模型API的并发数过高，请更换其他模型重试')
   }
 
   loading.value = false
@@ -229,11 +233,11 @@ const createOutline = async () => {
       if (done) {
         outline.value = getMdContent(outline.value)
         //@ts-ignore
-        outline.value = outline.value.replace(/<!--[\s\S]*?-->/g, '').replace(/<think>[\s\S]*?<\/think>/g, '')
+        outline.value = outline.value.replace(/<!--[\s\S]*?-->/g, '')
         outlineCreating.value = false
         return
       }
-
+  
       const chunk = decoder.decode(value, { stream: true })
       outline.value += chunk
 
@@ -249,6 +253,8 @@ const createOutline = async () => {
 
 const createPPT = async (template?: { slides: Slide[], theme: SlideTheme }) => {
   loading.value = true
+  mainStore.setAIPPTDialogState('running')
+  message.loading('演示文稿生成中，请稍等 ...', { duration: 0 })
 
   if (overwrite.value) resetSlides()
 
@@ -259,6 +265,13 @@ const createPPT = async (template?: { slides: Slide[], theme: SlideTheme }) => {
     model: model.value,
   })*/
   const stream = await genPPTStream(outline.value, language.value, style.value, materialFileInfo.value, selectedTemplate.value)
+
+  if (typeof stream === 'object' && stream.state === -1) {
+    loading.value = false
+    message.closeAll()
+    mainStore.setAIPPTDialogState(true)
+    return message.error('该模型API的并发数过高，请更换其他模型重试')
+  }
 
   if (img.value === 'test') {
     const imgs = await api.getMockData('imgs')
@@ -277,27 +290,36 @@ const createPPT = async (template?: { slides: Slide[], theme: SlideTheme }) => {
     reader.read().then(async ({ done, value }) => {
       if (done) {
         loading.value = false
+        message.closeAll()
         mainStore.setAIPPTDialogState(false)
         slidesStore.setTheme(templateTheme)
         return
       }
 
       const chunk = decoder.decode(value, { stream: true })
-      try {
-        const text = chunk.replace('```json', '').replace('```', '').trim()
-        if (text) {
-          const slide: AIPPTSlide = JSON.parse(chunk)
-          //@ts-ignore
-          templateData?.aiIndividual ? (await AIPPTPro(templateSlides, [slide])) : AIPPT(templateSlides, [slide])
-        }
-      }
-      catch (err) {
-        // eslint-disable-next-line
-        console.error(err)
+      const lines = chunk.split(/\n+/)
+
+      for (const line of lines) {
+        if (line) processChunk(line)
       }
 
       readStream()
     })
+  }
+
+  const processChunk = (chunk: string) => {
+    try {
+      const text = chunk.replace('```jsonl', '').replace('```json', '').replace('```', '').trim()
+      if (text) {
+        const slide: AIPPTSlide = JSON.parse(jsonrepair(text))
+        //@ts-ignore
+        templateData?.aiIndividual ? (await AIPPTPro(templateSlides, [slide])) : AIPPT(templateSlides, [slide])
+      }
+    }
+    catch (err) {
+      // eslint-disable-next-line
+      console.error(err)
+    }
   }
   readStream()
 }
@@ -416,7 +438,7 @@ const updateMaterialFile = async (files: FileList) => {
 
       img {
         width: 100%;
-        min-height: 180px;
+        min-height: 175px;
       }
     }
   }
@@ -508,6 +530,28 @@ const updateMaterialFile = async (files: FileList) => {
   .select-template {
     .templates {
       padding-right: 0;
+
+      .template {
+        img {
+          min-height: 60px;
+        }
+      }
+    }
+  }
+}
+
+@media screen and (width <= 380px) {
+  .preview {
+    pre {
+      max-height: 400px;
+    }
+    .outline-view {
+      max-height: 400px;
+    }
+  }
+  .select-template {
+    .templates {
+      max-height: 400px;
     }
   }
 }

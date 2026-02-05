@@ -236,13 +236,6 @@ export default () => {
     if (match) return match[1].trim()
     return content.replace('```markdown', '').replace('```', '')
   }
-  
-  const getJSONContent = (content: string) => {
-    const regex = /```json([^```]*)```/
-    const match = content.match(regex)
-    if (match) return match[1].trim()
-    return content.replace('```json', '').replace('```', '')
-  }
 
   const presetImgPool = (imgs: ImgPoolItem[]) => {
     imgPool.value = imgs
@@ -541,7 +534,6 @@ export default () => {
     presetImgPool,
     AIPPT,
     getMdContent,
-    getJSONContent,
     checkTextType,
     getNewTextElement,
   }

@@ -67,7 +67,14 @@
           </g>
         </svg>
 
-        <div class="shape-text" :class="[text.align, { 'editable': editable || text.content }]">
+        <div class="shape-text" 
+          :class="[text.align, { 'editable': editable || text.content }]"
+          :style="{
+            lineHeight: text.lineHeight,
+            letterSpacing: (text.wordSpace || 0) + 'px',
+            '--paragraphSpace': `${text.paragraphSpace === undefined ? 5 : text.paragraphSpace}px`,
+          }"
+        >
           <ProsemirrorEditor
             ref="prosemirrorEditorRef"
             v-if="editable || text.content"
@@ -216,6 +223,7 @@ const startEdit = () => {
   width: 100%;
   height: 100%;
   position: relative;
+  font-family: $textElementFont;
   cursor: move;
 
   svg {
@@ -232,7 +240,7 @@ const startEdit = () => {
   display: flex;
   flex-direction: column;
   padding: 10px;
-  line-height: 1.2;
+  line-height: 1.5;
   word-break: break-word;
   pointer-events: none;
   @include absolute-0();

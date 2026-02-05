@@ -1,4 +1,5 @@
 import axios, {getDefaultHeaders} from './config'
+import fetchRequest from './fetch'
 
 // @ts-ignore
 export const SERVER_URL = PPTONLINE_API_BASE
