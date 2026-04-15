@@ -1,10 +1,12 @@
-import {ref} from 'vue'
-import {storeToRefs} from 'pinia'
-import {parse, type Shape, type Element, type ChartItem, type BaseElement} from 'pptxtojson'
-import {nanoid} from 'nanoid'
-import {useSlidesStore} from '@/store'
-import {decrypt} from '@/utils/crypto'
-import {type ShapePoolItem, SHAPE_LIST, SHAPE_PATH_FORMULAS} from '@/configs/shapes'
+import { ref } from 'vue'
+import { storeToRefs } from 'pinia'
+import { parse, type Shape, type Element, type ChartItem, type BaseElement } from 'pptxtojson'
+import { nanoid } from 'nanoid'
+import tinycolor from 'tinycolor2'
+import { useSlidesStore } from '@/store'
+import { decrypt } from '@/utils/crypto'
+import { isFloatEqual } from '@/utils/common'
+import { type ShapePoolItem, SHAPE_LIST, SHAPE_PATH_FORMULAS } from '@/configs/shapes'
 import useAddSlidesOrElements from '@/hooks/useAddSlidesOrElements'
 import useSlideHandler from '@/hooks/useSlideHandler'
 import useHistorySnapshot from './useHistorySnapshot'
@@ -32,10 +34,45 @@ const shapeVAlignMap: Record<string, ShapeTextAlign> = {
   'up': 'top',
 }
 
+const getAspectRatio = (width: number, height: number) => {
+  if (!width || !height) return 0.5625
+
+  let aspectRatio = height / width
+  if (isFloatEqual(aspectRatio, 0.625)) aspectRatio = 0.625
+  else if (isFloatEqual(aspectRatio, 0.75)) aspectRatio = 0.75
+  else if (isFloatEqual(aspectRatio, 0.5625)) aspectRatio = 0.5625
+
+  return aspectRatio
+}
+
 const convertTextContent = (html: string, ratio: number) => {
   return html.replace(/font-size:\s*([\d.]+)pt/g, (match, p1) => {
     return `font-size: ${Math.floor(parseFloat(p1) * ratio)}px`
-  }).replace(/&nbsp;/g, ' ')
+  }).replace(/&nbsp;/g, ' ').replace(/style="([^"]*)"/g, (match, styleStr: string) => {
+    const gradientMatch = styleStr.match(/background:\s*(linear-gradient\([^)]+\))/)
+    if (!gradientMatch) return match
+
+    const colorMatches = gradientMatch[1].match(/#[0-9a-fA-F]{6}|#[0-9a-fA-F]{3}|rgba?\([^)]+\)/g)
+    if (!colorMatches || !colorMatches.length) return match
+
+    const colors = colorMatches.map(c => tinycolor(c))
+    const avgColor = colors.reduce((acc, c) => {
+      const rgb = c.toRgb()
+      return {
+        r: acc.r + rgb.r / colors.length,
+        g: acc.g + rgb.g / colors.length,
+        b: acc.b + rgb.b / colors.length,
+      }
+    }, { r: 0, g: 0, b: 0 })
+    const hexColor = tinycolor(avgColor).toHexString()
+
+    let newStyle = styleStr
+      .replace(/background:\s*linear-gradient\([^)]+\)\s*;?/g, '')
+      .replace(/background-clip:\s*text\s*;?/g, '')
+      .replace(/color:\s*transparent\s*;?/g, '')
+    newStyle = `color: ${hexColor}; ${newStyle}`.replace(/;\s*;/g, ';').replace(/;\s*$/, ';')
+    return `style="${newStyle}"`
+  })
 }
 
 const getMaxFontSize = (html: string, defaultFontSize: number = 18): number => {
@@ -148,7 +185,7 @@ const getParagraphMetrics = (html: string, ratio: number) => {
 
 export default () => {
   const slidesStore = useSlidesStore()
-  const {theme} = storeToRefs(useSlidesStore())
+  const { theme, viewportRatio, viewportSize } = storeToRefs(slidesStore)
 
   const {addHistorySnapshot} = useHistorySnapshot()
   const {addSlidesFromData} = useAddSlidesOrElements()
@@ -163,14 +200,20 @@ export default () => {
     const reader = new FileReader()
     reader.addEventListener('load', () => {
       try {
-        const { slides, theme } = JSON.parse(reader.result as string)
+        const { slides, theme, width, height } = JSON.parse(reader.result as string)
+        const aspectRatio = getAspectRatio(width, height)
+
         if (cover) {
           slidesStore.updateSlideIndex(0)
           slidesStore.setSlides(slides, (theme || {}))
+          if (aspectRatio !== viewportRatio.value) slidesStore.setViewportRatio(aspectRatio)
+          if (width && width !== viewportSize) slidesStore.setViewportSize(width)
           addHistorySnapshot()
         }
         else if (isEmptySlide.value) {
           slidesStore.setSlides(slides, (theme || {}))
+          if (aspectRatio !== viewportRatio.value) slidesStore.setViewportRatio(aspectRatio)
+          if (width && width !== viewportSize) slidesStore.setViewportSize(width)
           addHistorySnapshot()
         } else addSlidesFromData(slides)
       } catch {
@@ -187,14 +230,20 @@ export default () => {
     const reader = new FileReader()
     reader.addEventListener('load', () => {
       try {
-        const { slides, theme } = JSON.parse(decrypt(reader.result as string))
+        const { slides, theme, width, height } = JSON.parse(decrypt(reader.result as string))
+        const aspectRatio = getAspectRatio(width, height)
+
         if (cover) {
           slidesStore.updateSlideIndex(0)
           slidesStore.setSlides(slides, (theme || {}))
+          if (aspectRatio !== viewportRatio.value) slidesStore.setViewportRatio(aspectRatio)
+          if (width && width !== viewportSize) slidesStore.setViewportSize(width)
           addHistorySnapshot()
         }
         else if (isEmptySlide.value) {
           slidesStore.setSlides(slides, (theme || {}))
+          if (aspectRatio !== viewportRatio.value) slidesStore.setViewportRatio(aspectRatio)
+          if (width && width !== viewportSize) slidesStore.setViewportSize(width)
           addHistorySnapshot()
         } else addSlidesFromData(slides)
       } catch {
@@ -397,8 +446,13 @@ export default () => {
     reader.onload = async e => {
       let json = null
       try {
-        json = await parse(e.target!.result as ArrayBuffer)
-      } catch {
+        json = await parse(e.target!.result as ArrayBuffer, {
+          imageMode: 'base64',
+          videoMode: 'blob',
+          audioMode: 'blob',
+        })
+      }
+      catch {
         exporting.value = false
         message.error('无法正确读取 / 解析该文件')
         return
@@ -406,6 +460,10 @@ export default () => {
 
       /*let ratio = 96 / 72
       const width = json.size.width
+
+      const height = json.size.height
+
+      const aspectRatio = getAspectRatio(width, height)
 
       if (fixedViewport) ratio = 1000 / width
       else slidesStore.setViewportSize(width * ratio)*/
@@ -427,7 +485,7 @@ export default () => {
           background = {
             type: 'image',
             image: {
-              src: await uploadFromDataUrl(value.picBase64),
+              src: await uploadFromDataUrl(value.base64),
               size: 'cover',
             },
           }
@@ -440,7 +498,7 @@ export default () => {
                 ...item,
                 pos: parseInt(item.pos),
               })),
-              rotate: value.rot + 90,
+              rotate: value.rot,
             },
           }
         }
@@ -492,7 +550,7 @@ export default () => {
                   rotate: el.rotate,
                   viewBox: [200, 200],
                   path: 'M 0 0 L 200 0 L 200 200 L 0 200 Z',
-                  fill: el.fill.type === 'color' ? el.fill.value : '',
+                  fill: el.fill?.type === 'color' ? el.fill.value : '',
                   fixedRatio: false,
                   outline: {
                     color: el.borderColor,
@@ -507,6 +565,7 @@ export default () => {
                     lineHeight: 1,
                   },
                 }
+                if (el.link) shapeEl.link = { type: 'web', target: el.link }
                 if (metrics.lineHeight) shapeEl.text!.lineHeight = metrics.lineHeight
                 if (metrics.margin) shapeEl.text!.paragraphSpace = metrics.margin
                 slide.elements.push(shapeEl)
@@ -530,7 +589,7 @@ export default () => {
                     width: +(el.borderWidth * ratio).toFixed(2),
                     style: el.borderType,
                   },
-                  fill: el.fill.type === 'color' ? el.fill.value : '',
+                  fill: el.fill?.type === 'color' ? el.fill.value : '',
                   vertical: el.isVertical,
                 }
                 if (el.shadow) {
@@ -541,16 +600,17 @@ export default () => {
                     color: el.shadow.color,
                   }
                 }
-                slide.elements.push(textEl)
+                if (el.link) textEl.link = { type: 'web', target: el.link }
                 if (metrics.lineHeight) textEl.lineHeight = metrics.lineHeight
                 if (metrics.margin) textEl.paragraphSpace = metrics.margin
+                slide.elements.push(textEl)
               }
             }
             else if (el.type === 'image') {
               const element: PPTImageElement = {
                 type: 'image',
                 id: nanoid(10),
-                src: await uploadFromDataUrl(el.src),
+                src: await uploadFromDataUrl(el.base64),
                 width: el.width,
                 height: el.height,
                 left: el.left,
@@ -593,6 +653,8 @@ export default () => {
                   range: [[0, 0], [100, 100]]
                 }
               }
+
+              if (el.link) element.link = { type: 'web', target: el.link }
               slide.elements.push(element)
             } else if (el.type === 'math') {
               slide.elements.push({
@@ -606,7 +668,8 @@ export default () => {
                 fixedRatio: true,
                 rotate: 0,
               })
-            } else if (el.type === 'audio') {
+            }
+            else if (el.type === 'audio' && el.blob) {
               slide.elements.push({
                 type: 'audio',
                 id: nanoid(10),
@@ -621,11 +684,12 @@ export default () => {
                 loop: false,
                 autoplay: false,
               })
-            } else if (el.type === 'video') {
+            }
+            else if (el.type === 'video' && el.blob) {
               slide.elements.push({
                 type: 'video',
                 id: nanoid(10),
-                src: el.blob ? (await uploadFromDataUrl(el.blob)) : el.src ? el.src : '',
+                src: await uploadFromDataUrl(el.blob),
                 width: el.width,
                 height: el.height,
                 left: el.left,
@@ -650,7 +714,7 @@ export default () => {
                   rotate: el.fill.value.rot,
                 } : undefined
 
-                const pattern: string | undefined = el.fill?.type === 'image' ? (await uploadFromDataUrl(el.fill.value.picBase64)) : undefined
+                const pattern: string | undefined = el.fill?.type === 'image' ? (await uploadFromDataUrl(el.fill.value.base64)) : undefined
 
                 const fill = el.fill?.type === 'color' ? el.fill.value : ''
 
@@ -684,6 +748,7 @@ export default () => {
                   flipH: el.isFlipH,
                   flipV: el.isFlipV,
                 }
+                if (el.link) element.link = { type: 'web', target: el.link }
                 if (metrics.lineHeight) element.text!.lineHeight = metrics.lineHeight
                 if (metrics.margin) element.text!.paragraphSpace = metrics.margin
 
@@ -794,8 +859,8 @@ export default () => {
                     if (element.width === 0) element.width = 0.1
                     if (element.height === 0) element.height = 0.1
                     element.path = el.path!.replace(/NaN/g, '0')
-                  } else {
-                    element.special = true
+                  }
+                  else {
                     element.path = el.path!
                   }
                   const {maxX, maxY} = getSvgPathRange(element.path)
@@ -1014,9 +1079,11 @@ export default () => {
       if (cover) {
         slidesStore.updateSlideIndex(0)
         slidesStore.setSlides(slides)
+        if (aspectRatio !== viewportRatio.value) slidesStore.setViewportRatio(aspectRatio)
         addHistorySnapshot()
       } else if (isEmptySlide.value) {
         slidesStore.setSlides(slides)
+        if (aspectRatio !== viewportRatio.value) slidesStore.setViewportRatio(aspectRatio)
         addHistorySnapshot()
       } else addSlidesFromData(slides)
 

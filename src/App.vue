@@ -10,12 +10,14 @@
 <script lang="ts" setup>
 import {onMounted} from 'vue'
 import {storeToRefs} from 'pinia'
+import { nanoid } from 'nanoid'
 import {useScreenStore, useMainStore, useSnapshotStore, useSlidesStore, useUserStore} from '@/store'
 import {LOCALSTORAGE_KEY_DISCARDED_DB} from '@/configs/storage'
 import {deleteDiscardedDB} from '@/utils/database'
 import {isPC} from '@/utils/common'
-import type {Slide} from '@/types/slides'
 import api from '@/services'
+
+import type {Slide} from '@/types/slides'
 import * as pptInfoApi from '@/services/pptInfo'
 import {getQueryParameter} from '@/utils/queryString'
 import * as userApi from '@/services/user'
@@ -31,15 +33,20 @@ const _isPC = isPC()
 const mainStore = useMainStore()
 const slidesStore = useSlidesStore()
 const snapshotStore = useSnapshotStore()
-const userStore = useUserStore()
-const {databaseId} = storeToRefs(mainStore)
-const {slides} = storeToRefs(slidesStore)
-const {screening} = storeToRefs(useScreenStore())
+const screenStore = useScreenStore()
+const { databaseId } = storeToRefs(mainStore)
+const { slides } = storeToRefs(slidesStore)
+const { screening } = storeToRefs(screenStore)
+
 const {enterScreening} = useScreening()
+const userStore = useUserStore()
 
 const pptCode = getQueryParameter('pptCode')
 const isMock = getQueryParameter('isMock')
 const readonly = getQueryParameter('readonly')
+
+const isAudienceMode = new URLSearchParams(window.location.search).get('mode') === 'audience'
+
 
 if (import.meta.env.MODE !== 'development') {
   window.onbeforeunload = () => false
@@ -48,6 +55,14 @@ if (import.meta.env.MODE !== 'development') {
 onMounted(async () => {
   let userInfo = isMock ? {} : (await userApi.queryCurrentUser())
   userStore.setUserInfo(userInfo)
+  if (isAudienceMode) {
+    slidesStore.setSlides([{
+      id: nanoid(10),
+      elements: [],
+    }])
+    screenStore.setScreening(true)
+    return
+  }
   if (isMock) {
     const slides = await api.getMockData('slides')
     slidesStore.setSlides(slides)
