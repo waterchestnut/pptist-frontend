@@ -11,7 +11,7 @@ import useAddSlidesOrElements from '@/hooks/useAddSlidesOrElements'
 import useSlideHandler from '@/hooks/useSlideHandler'
 import useHistorySnapshot from './useHistorySnapshot'
 import message from '@/utils/message'
-import {getSvgPathRange} from '@/utils/svgPathParser'
+import { getSvgPathRange } from '@/utils/svgPathParser'
 import type {
   Slide,
   TableCellStyle,
@@ -187,9 +187,9 @@ export default () => {
   const slidesStore = useSlidesStore()
   const { theme, viewportRatio, viewportSize } = storeToRefs(slidesStore)
 
-  const {addHistorySnapshot} = useHistorySnapshot()
-  const {addSlidesFromData} = useAddSlidesOrElements()
-  const {isEmptySlide} = useSlideHandler()
+  const { addHistorySnapshot } = useHistorySnapshot()
+  const { addSlidesFromData } = useAddSlidesOrElements()
+  const { isEmptySlide } = useSlideHandler()
 
   const exporting = ref(false)
 
@@ -215,8 +215,10 @@ export default () => {
           if (aspectRatio !== viewportRatio.value) slidesStore.setViewportRatio(aspectRatio)
           if (width && width !== viewportSize) slidesStore.setViewportSize(width)
           addHistorySnapshot()
-        } else addSlidesFromData(slides)
-      } catch {
+        }
+        else addSlidesFromData(slides)
+      }
+      catch {
         message.error('无法正确读取 / 解析该文件')
       }
     })
@@ -245,8 +247,10 @@ export default () => {
           if (aspectRatio !== viewportRatio.value) slidesStore.setViewportRatio(aspectRatio)
           if (width && width !== viewportSize) slidesStore.setViewportSize(width)
           addHistorySnapshot()
-        } else addSlidesFromData(slides)
-      } catch {
+        }
+        else addSlidesFromData(slides)
+      }
+      catch {
         message.error('无法正确读取 / 解析该文件')
       }
     })
@@ -254,7 +258,7 @@ export default () => {
   }
 
   const rotateLine = (line: PPTLineElement, angleDeg: number) => {
-    const {start, end} = line
+    const { start, end } = line
 
     const angleRad = angleDeg * Math.PI / 180
 
@@ -309,13 +313,16 @@ export default () => {
     if (!el.isFlipV && !el.isFlipH) { // 右下
       start = [0, 0]
       end = [el.width, el.height]
-    } else if (el.isFlipV && el.isFlipH) { // 左上
+    }
+    else if (el.isFlipV && el.isFlipH) { // 左上
       start = [el.width, el.height]
       end = [0, 0]
-    } else if (el.isFlipV && !el.isFlipH) { // 右上
+    }
+    else if (el.isFlipV && !el.isFlipH) { // 右上
       start = [0, el.height]
       end = [el.width, 0]
-    } else { // 左下
+    }
+    else { // 左下
       start = [el.width, 0]
       end = [0, el.height]
     }
@@ -333,7 +340,7 @@ export default () => {
       points: ['', /straightConnector/.test(el.shapType) ? 'arrow' : '']
     }
     if (el.rotate) {
-      const {start, end, offset} = rotateLine(data, el.rotate)
+      const { start, end, offset } = rotateLine(data, el.rotate)
 
       data.start = start
       data.end = end
@@ -367,7 +374,7 @@ export default () => {
     const centerY = (minY + maxY) / 2
 
     return elements.map(element => {
-      const newElement = {...element}
+      const newElement = { ...element }
 
       if (axis === 'y') newElement.left = 2 * centerX - element.left - element.width
       if (axis === 'x') newElement.top = 2 * centerY - element.top - element.height
@@ -430,7 +437,7 @@ export default () => {
       cover: true,
       fixedViewport: true,
     }
-    const {cover, fixedViewport} = {...defaultOptions, ...options}
+    const { cover, fixedViewport } = { ...defaultOptions, ...options }
 
     const file = files[0]
     if (!file) return
@@ -460,7 +467,6 @@ export default () => {
 
       /*let ratio = 96 / 72
       const width = json.size.width
-
       const height = json.size.height
 
       const aspectRatio = getAspectRatio(width, height)
@@ -469,17 +475,18 @@ export default () => {
       else slidesStore.setViewportSize(width * ratio)*/
       const width = json.size.width
       const height = json.size.height
+      const aspectRatio = getAspectRatio(width, height)
       let viewportSize = 1000
       if (!fixedViewport) viewportSize = width
       let ratio = viewportSize / width
       slidesStore.setViewportSize(viewportSize)
-      slidesStore.setViewportRatio(height / width)
+      slidesStore.setViewportRatio(aspectRatio)
 
-      slidesStore.setTheme({themeColors: json.themeColors})
+      slidesStore.setTheme({ themeColors: json.themeColors })
 
       const slides: Slide[] = []
       for (const item of json.slides) {
-        const {type, value} = item.fill
+        const { type, value } = item.fill
         let background: SlideBackground
         if (type === 'image') {
           background = {
@@ -489,7 +496,8 @@ export default () => {
               size: 'cover',
             },
           }
-        } else if (type === 'gradient') {
+        }
+        else if (type === 'gradient') {
           background = {
             type: 'gradient',
             gradient: {
@@ -656,7 +664,8 @@ export default () => {
 
               if (el.link) element.link = { type: 'web', target: el.link }
               slide.elements.push(element)
-            } else if (el.type === 'math') {
+            }
+            else if (el.type === 'math') {
               slide.elements.push({
                 type: 'image',
                 id: nanoid(10),
@@ -702,7 +711,8 @@ export default () => {
               if (el.shapType === 'line' || /straightConnector/.test(el.shapType) || /bentConnector/.test(el.shapType) || /curvedConnector/.test(el.shapType)) {
                 const lineElement = parseLineElement(el, ratio)
                 slide.elements.push(lineElement)
-              } else {
+              }
+              else {
                 const shape = shapeList.find(item => item.pptxShapeType === el.shapType)
 
                 const gradient: Gradient | undefined = el.fill?.type === 'gradient' ? {
@@ -845,12 +855,14 @@ export default () => {
                     }
                     else element.path = pathFormula.formula(el.width, el.height)
                   }
-                } else if (el.path && el.path.indexOf('NaN') === -1) {
-                  const {maxX, maxY} = getSvgPathRange(el.path)
+                }
+                else if (el.path && el.path.indexOf('NaN') === -1) {
+                  const { maxX, maxY } = getSvgPathRange(el.path)
                   element.path = el.path
                   if ((maxX / maxY) > (originWidth / originHeight)) {
                     element.viewBox = [maxX, maxX * originHeight / originWidth]
-                  } else {
+                  }
+                  else {
                     element.viewBox = [maxY * originWidth / originHeight, maxY]
                   }
                 }
@@ -863,17 +875,19 @@ export default () => {
                   else {
                     element.path = el.path!
                   }
-                  const {maxX, maxY} = getSvgPathRange(element.path)
+                  const { maxX, maxY } = getSvgPathRange(element.path)
                   if ((maxX / maxY) > (originWidth / originHeight)) {
                     element.viewBox = [maxX, maxX * originHeight / originWidth]
-                  } else {
+                  }
+                  else {
                     element.viewBox = [maxY * originWidth / originHeight, maxY]
                   }
                 }
-    
+
                 if (element.path && element.viewBox[0] && element.viewBox[1]) slide.elements.push(element)
               }
-            } else if (el.type === 'table') {
+            }
+            else if (el.type === 'table') {
               const row = el.data.length
               const col = el.data[0].length
 
@@ -950,7 +964,8 @@ export default () => {
                 },
                 cellMinHeight: el.rowHeights[0] ? el.rowHeights[0] * ratio : 36,
               })
-            } else if (el.type === 'chart') {
+            }
+            else if (el.type === 'chart') {
               let labels: string[]
               let legends: string[]
               let series: number[][]
@@ -959,7 +974,8 @@ export default () => {
                 labels = el.data[0].map((item, index) => `坐标${index + 1}`)
                 legends = ['X', 'Y']
                 series = el.data
-              } else {
+              }
+              else {
                 const data = el.data as ChartItem[]
                 labels = Object.values(data[0].xlabels)
                 legends = data.map(item => item.key)
@@ -1022,7 +1038,8 @@ export default () => {
                 },
                 options,
               })
-            } else if (el.type === 'group') {
+            }
+            else if (el.type === 'group') {
               let elements: BaseElement[] = el.elements.map(_el => {
                 let left = _el.left + originLeft
                 let top = _el.top + originTop
@@ -1062,7 +1079,8 @@ export default () => {
               if (el.isFlipH) elements = flipGroupElements(elements, 'y')
               if (el.isFlipV) elements = flipGroupElements(elements, 'x')
               await parseElements(elements)
-            } else if (el.type === 'diagram') {
+            }
+            else if (el.type === 'diagram') {
               const elements = el.elements.map(_el => ({
                 ..._el,
                 left: _el.left + originLeft,
@@ -1081,11 +1099,13 @@ export default () => {
         slidesStore.setSlides(slides)
         if (aspectRatio !== viewportRatio.value) slidesStore.setViewportRatio(aspectRatio)
         addHistorySnapshot()
-      } else if (isEmptySlide.value) {
+      }
+      else if (isEmptySlide.value) {
         slidesStore.setSlides(slides)
         if (aspectRatio !== viewportRatio.value) slidesStore.setViewportRatio(aspectRatio)
         addHistorySnapshot()
-      } else addSlidesFromData(slides)
+      }
+      else addSlidesFromData(slides)
 
       exporting.value = false
     }
