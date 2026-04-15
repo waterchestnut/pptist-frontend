@@ -14,6 +14,8 @@
 
 简体中文 | [English](README.md)
 
+# 在线课件，文稿内容保存在数据库中
+**在线体验地址👉：[https://micro.lc.jtxuexi.com/sub/pptonline](https://micro.lc.jtxuexi.com/sub/pptonline)**
 
 # 🎨 PPTist
 **PowerPoint-ist（/'pauəpɔintist/）**，一个基于 Web 的在线演示文稿（幻灯片）应用，还原了大部分 Office PowerPoint 常用功能，支持 文字、图片、形状、线条、图表、表格、视频、音频、公式 几种最常用的元素类型，可以在 Web 浏览器中编辑/演示幻灯片。
