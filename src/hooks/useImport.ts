@@ -21,14 +21,14 @@ import type {
   PPTShapeElement,
   PPTLineElement,
   PPTImageElement,
-  ShapeTextAlign,
+  TextAlignVertical,
   PPTTextElement,
   ChartOptions,
   Gradient,
 } from '@/types/slides'
 import {uploadFromDataUrl} from '@/services/resInfo'
 
-const shapeVAlignMap: Record<string, ShapeTextAlign> = {
+const vAlignMap: Record<string, TextAlignVertical> = {
   'mid': 'middle',
   'down': 'bottom',
   'up': 'top',
@@ -569,7 +569,7 @@ export default () => {
                     content: convertTextContent(el.content, fontScale),
                     defaultFontName: theme.value.fontName,
                     defaultColor: theme.value.fontColor,
-                    align: shapeVAlignMap[el.vAlign] || 'middle',
+                    align: vAlignMap[el.vAlign] || 'middle',
                     lineHeight: 1,
                   },
                 }
@@ -635,7 +635,25 @@ export default () => {
                   style: el.borderType,
                 }
               }
-              const clipShapeTypes = ['rect', 'roundRect', 'ellipse', 'triangle', 'rhombus', 'pentagon', 'hexagon', 'heptagon', 'octagon', 'parallelogram', 'trapezoid']
+              const clipShapeTypes = [
+                'rect',
+                'snip1Rect',
+                'snip2DiagRect',
+                'roundRect',
+                'ellipse',
+                'triangle',
+                'rtTriangle',
+                'diamond',
+                'pentagon',
+                'hexagon',
+                'heptagon',
+                'octagon',
+                'chevron',
+                'homePlate',
+                'rightArrow',
+                'parallelogram',
+                'trapezoid'
+              ]
               let geom = el.geom || 'rect'
               if (geom.indexOf('custom:') !== -1) geom = geom.replace('custom:', '')
               if (!clipShapeTypes.includes(geom)) geom = 'rect'
@@ -753,7 +771,7 @@ export default () => {
                     content: convertTextContent(el.content, ratio),
                     defaultFontName: theme.value.fontName,
                     defaultColor: theme.value.fontColor,
-                    align: shapeVAlignMap[el.vAlign] || 'middle',
+                    align: vAlignMap[el.vAlign] || 'middle',
                   },
                   flipH: el.isFlipH,
                   flipV: el.isFlipV,
@@ -918,6 +936,7 @@ export default () => {
                     text: textDiv.innerText,
                     style: {
                       ...style,
+                      vAlign: vAlignMap[cellData.vAlign] || 'middle',
                       align: ['left', 'right', 'center'].includes(align) ? (align as 'left' | 'right' | 'center') : 'left',
                       fontsize,
                       fontname,
