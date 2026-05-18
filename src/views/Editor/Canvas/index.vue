@@ -50,10 +50,15 @@
           :isMultiSelect="activeElementIdList.length > 1"
           :rotateElement="rotateElement"
           :scaleElement="scaleElement"
-          :openLinkDialog="openLinkDialog"
           :dragLineElement="dragLineElement"
           :moveShapeKeypoint="moveShapeKeypoint"
           v-show="!hiddenElementIdList.includes(element.id)"
+        />
+        <ElementFloatLayer
+          :elementList="elementList"
+          :canvasRef="canvasRef"
+          :viewportStyles="viewportStyles"
+          :openLinkDialog="openLinkDialog"
         />
         <ViewportBackground />
       </div>
@@ -132,6 +137,7 @@ import useCreateElement from '@/hooks/useCreateElement'
 import EditableElement from './EditableElement.vue'
 import MouseSelection from './MouseSelection.vue'
 import ViewportBackground from './ViewportBackground.vue'
+import ElementFloatLayer from './ElementFloatLayer/index.vue'
 import AlignmentLine from './AlignmentLine.vue'
 import Ruler from './Ruler.vue'
 import ElementCreateSelection from './ElementCreateSelection.vue'
@@ -140,6 +146,7 @@ import MultiSelectOperate from './Operate/MultiSelectOperate.vue'
 import Operate from './Operate/index.vue'
 import LinkDialog from './LinkDialog.vue'
 import Modal from '@/components/Modal.vue'
+import message from '@/utils/message'
 
 const mainStore = useMainStore()
 const {
@@ -150,6 +157,7 @@ const {
   editorAreaFocus,
   gridLineSize,
   showRuler,
+  showBubbleMenu,
   creatingElement,
   creatingCustomShape,
   canvasScale,
@@ -268,6 +276,12 @@ const toggleRuler = () => {
   mainStore.setRulerState(!showRuler.value)
 }
 
+// 开关浮动菜单
+const toggleBubbleMenu = () => {
+  mainStore.setBubbleMenuState(!showBubbleMenu.value)
+  message.success(`元素气泡菜单已${showBubbleMenu.value ? '启用' : '禁用'}`)
+}
+
 // 在鼠标绘制的范围插入元素
 const { insertElementFromCreateSelection, formatCreateSelection } = useInsertFromCreateSelection(viewportRef)
 
@@ -336,6 +350,11 @@ const contextmenus = (): ContextmenuItem[] => {
     {
       text: '重置当前页',
       handler: deleteAllElements,
+    },
+    {
+      text: '气泡菜单',
+      subText: showBubbleMenu.value ? '√' : '',
+      handler: toggleBubbleMenu,
     },
     { divider: true },
     {

@@ -45,8 +45,98 @@ const getAspectRatio = (width: number, height: number) => {
   return aspectRatio
 }
 
+const getTextNodeStyleSpan = (textNode: Text, styleProp: 'fontSize' | 'color') => {
+  let parent = textNode.parentElement
+
+  while (parent) {
+    if (parent.tagName === 'SPAN' && parent.style[styleProp]) return parent
+    if (parent.tagName === 'LI') break
+    parent = parent.parentElement
+  }
+
+  return null
+}
+
+const getListItemStyleValue = (li: HTMLLIElement, styleProp: 'fontSize' | 'color') => {
+  const walker = document.createTreeWalker(li, NodeFilter.SHOW_TEXT)
+  let styleSpan: HTMLSpanElement | null = null
+  let hasTextContent = false
+
+  let currentNode = walker.nextNode()
+  while (currentNode) {
+    const textNode = currentNode as Text
+    const textContent = textNode.textContent?.replace(/\s+/g, '')
+
+    if (textContent) {
+      const parentLi = textNode.parentElement?.closest('li')
+      if (parentLi === li) {
+        hasTextContent = true
+
+        const currentStyleSpan = getTextNodeStyleSpan(textNode, styleProp)
+        if (!currentStyleSpan) return ''
+        if (!styleSpan) styleSpan = currentStyleSpan as HTMLSpanElement
+        else if (styleSpan !== currentStyleSpan) return ''
+      }
+    }
+
+    currentNode = walker.nextNode()
+  }
+
+  return hasTextContent && styleSpan ? styleSpan.style[styleProp] : ''
+}
+
+const promoteListTextStyle = (html: string) => {
+  if (!/<(ul|ol)\b/i.test(html) || (!/font-size\s*:/i.test(html) && !/color\s*:/i.test(html))) return html
+
+  const parser = new DOMParser()
+  const doc = parser.parseFromString(html, 'text/html')
+  const lists = doc.body.querySelectorAll<HTMLElement>('ul, ol')
+
+  lists.forEach(list => {
+    const listItems = Array.from(list.children).filter(child => child.tagName === 'LI') as HTMLLIElement[]
+    if (!listItems.length) return
+
+    if (!list.style.fontSize) {
+      let fontSize = ''
+      for (const li of listItems) {
+        const currentFontSize = getListItemStyleValue(li, 'fontSize')
+        if (!currentFontSize) {
+          fontSize = ''
+          break
+        }
+        if (!fontSize) fontSize = currentFontSize
+        else if (fontSize !== currentFontSize) {
+          fontSize = ''
+          break
+        }
+      }
+      if (fontSize) list.style.fontSize = fontSize
+    }
+
+    if (!list.style.color) {
+      let color = ''
+      for (const li of listItems) {
+        const currentColor = getListItemStyleValue(li, 'color')
+        if (!currentColor) {
+          color = ''
+          break
+        }
+        if (!color) color = currentColor
+        else if (color !== currentColor) {
+          color = ''
+          break
+        }
+      }
+      if (color) list.style.color = color
+    }
+  })
+
+  return doc.body.innerHTML
+}
+
 const convertTextContent = (html: string, ratio: number) => {
-  return html.replace(/font-size:\s*([\d.]+)pt/g, (match, p1) => {
+  if (!html) return ''
+  const processedHtml = html.replace(/font-size:\s*([\d.]+)pt/g, (match, p1) => {
     return `font-size: ${Math.floor(parseFloat(p1) * ratio)}px`
   }).replace(/&nbsp;/g, ' ').replace(/style="([^"]*)"/g, (match, styleStr: string) => {
     const gradientMatch = styleStr.match(/background:\s*(linear-gradient\([^)]+\))/)
@@ -73,6 +163,8 @@ const convertTextContent = (html: string, ratio: number) => {
     newStyle = `color: ${hexColor}; ${newStyle}`.replace(/;\s*;/g, ';').replace(/;\s*$/, ';')
     return `style="${newStyle}"`
   })
+
+  return promoteListTextStyle(processedHtml)
 }
 
 const getMaxFontSize = (html: string, defaultFontSize: number = 18): number => {
@@ -200,12 +292,13 @@ export default () => {
     const reader = new FileReader()
     reader.addEventListener('load', () => {
       try {
-        const { slides, theme, width, height } = JSON.parse(reader.result as string)
+        const { title, slides, theme, width, height } = JSON.parse(reader.result as string)
         const aspectRatio = getAspectRatio(width, height)
 
         if (cover) {
           slidesStore.updateSlideIndex(0)
           slidesStore.setSlides(slides, (theme || {}))
+          if (title) slidesStore.setTitle(title)
           if (aspectRatio !== viewportRatio.value) slidesStore.setViewportRatio(aspectRatio)
           if (width && width !== viewportSize) slidesStore.setViewportSize(width)
           addHistorySnapshot()
@@ -232,12 +325,13 @@ export default () => {
     const reader = new FileReader()
     reader.addEventListener('load', () => {
       try {
-        const { slides, theme, width, height } = JSON.parse(decrypt(reader.result as string))
+        const { title, slides, theme, width, height } = JSON.parse(decrypt(reader.result as string))
         const aspectRatio = getAspectRatio(width, height)
 
         if (cover) {
           slidesStore.updateSlideIndex(0)
           slidesStore.setSlides(slides, (theme || {}))
+          if (title) slidesStore.setTitle(title)
           if (aspectRatio !== viewportRatio.value) slidesStore.setViewportRatio(aspectRatio)
           if (width && width !== viewportSize) slidesStore.setViewportSize(width)
           addHistorySnapshot()
@@ -574,6 +668,7 @@ export default () => {
                   },
                 }
                 if (el.link) shapeEl.link = { type: 'web', target: el.link }
+                if (el.textInset) shapeEl.text!.inset = [el.textInset.t, el.textInset.r, el.textInset.b, el.textInset.l]
                 if (metrics.lineHeight) shapeEl.text!.lineHeight = metrics.lineHeight
                 if (metrics.margin) shapeEl.text!.paragraphSpace = metrics.margin
                 slide.elements.push(shapeEl)
@@ -609,6 +704,7 @@ export default () => {
                   }
                 }
                 if (el.link) textEl.link = { type: 'web', target: el.link }
+                if (el.textInset) textEl.inset = [el.textInset.t, el.textInset.r, el.textInset.b, el.textInset.l]
                 if (metrics.lineHeight) textEl.lineHeight = metrics.lineHeight
                 if (metrics.margin) textEl.paragraphSpace = metrics.margin
                 slide.elements.push(textEl)
@@ -777,6 +873,7 @@ export default () => {
                   flipV: el.isFlipV,
                 }
                 if (el.link) element.link = { type: 'web', target: el.link }
+                if (el.textInset) element.text!.inset = [el.textInset.t, el.textInset.r, el.textInset.b, el.textInset.l]
                 if (metrics.lineHeight) element.text!.lineHeight = metrics.lineHeight
                 if (metrics.margin) element.text!.paragraphSpace = metrics.margin
 
