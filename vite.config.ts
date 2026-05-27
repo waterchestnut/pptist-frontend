@@ -35,6 +35,35 @@ export default defineConfig(({command, mode}) => {
         scale: 1,
         defaultClass: 'i-icon',
       }),
+      {
+        name: 'inject-env',
+        transformIndexHtml: {
+          order: 'pre',
+          handler() {
+            return [
+              {
+                tag: 'script',
+                attrs: {type: 'text/javascript'},
+                children: `
+    /*用户中心接口地址*/
+    UCENTER_API_BASE='${env.UCENTER_API_BASE || 'http://localhost:12001'}';
+    /*用户中心平台地址*/
+    UCENTER_PLATFORM_BASE='${env.UCENTER_PLATFORM_BASE || 'http://localhost:11002'}';
+    /*文件服务地址*/
+    DOC_API_BASE='${env.DOC_API_BASE || 'http://localhost:12004'}';
+    UPLOAD_FILE_SIZE_LIMIT=parseInt('${env.UPLOAD_FILE_SIZE_LIMIT || 500 * 1024 * 1024}');
+    /*在线课件接口地址*/
+    PPTONLINE_API_BASE='${env.PPTONLINE_API_BASE || 'http://localhost:12005'}';
+    /*资源服务地址*/
+    RESOURCE_API_BASE='${env.RESOURCE_API_BASE || 'http://localhost:12007'}';
+    /*资源平台地址*/
+    RESOURCE_PLATFORM_BASE='${env.RESOURCE_PLATFORM_BASE || 'http://localhost:11007'}';
+    `,
+              },
+            ]
+          },
+        },
+      },
     ],
     server: {
       host: '127.0.0.1',
@@ -61,21 +90,6 @@ export default defineConfig(({command, mode}) => {
       alias: {
         '@': fileURLToPath(new URL('./src', import.meta.url))
       }
-    },
-    define: {
-      /* 用户中心接口地址 */
-      UCENTER_API_BASE: JSON.stringify(env.UCENTER_API_BASE || 'http://localhost:12001'),
-      /* 用户中心平台地址 */
-      UCENTER_PLATFORM_BASE: JSON.stringify(env.UCENTER_PLATFORM_BASE || 'http://localhost:11002'),
-      /* 文件服务地址 */
-      DOC_API_BASE: JSON.stringify(env.DOC_API_BASE || 'http://localhost:12004'),
-      UPLOAD_FILE_SIZE_LIMIT: JSON.stringify(env.UPLOAD_FILE_SIZE_LIMIT || 500 * 1024 * 1024),
-      /* 在线课件接口地址 */
-      PPTONLINE_API_BASE: JSON.stringify(env.PPTONLINE_API_BASE || 'http://localhost:12005'),
-      /* 资源服务地址 */
-      RESOURCE_API_BASE: JSON.stringify(env.RESOURCE_API_BASE || 'http://localhost:12007'),
-      /* 资源平台地址 */
-      RESOURCE_PLATFORM_BASE: JSON.stringify(env.RESOURCE_PLATFORM_BASE || 'http://localhost:11007'),
     },
   }
 })

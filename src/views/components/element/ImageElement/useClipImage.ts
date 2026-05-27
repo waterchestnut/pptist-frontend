@@ -8,7 +8,7 @@ export default (element: Ref<PPTImageElement>) => {
     
     if (element.value.clip) {
       const shape = element.value.clip.shape || ClipPathTypes.RECT
-      _clipShape = CLIPPATHS[shape]
+      _clipShape = CLIPPATHS[shape] || CLIPPATHS.rect
     }
     if (_clipShape.radius !== undefined && element.value.radius) {
       _clipShape = {
