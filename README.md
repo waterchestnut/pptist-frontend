@@ -24,9 +24,10 @@
 
 
 # ✨ Highlights
-1. **Easy Development**: Built with Vue 3.x and TypeScript, it does not rely on UI component libraries and avoids third-party components as much as possible. This makes styling customization easier and functionality extension more convenient.
-2. **User Friendly**: It offers a context menu available everywhere, dozens of keyboard shortcuts, and countless editing detail optimizations, striving to replicate a desktop application-level experience.
-3. **Feature Rich**: Supports most of the commonly used elements and functionalities found in PowerPoint, supports generate PPT by AI, supports exporting in various formats, and offers basic editing and previewing on mobile devices.
+1. **Easy Development**: Built with Vue 3.x and TypeScript, it does not rely on UI component libraries, making styling customization easier and functionality extension more convenient.
+2. **User Friendly**: It offers context menus everywhere, dozens of shortcut operations, and continuously refined editing details, striving to replicate a desktop application-level experience.
+3. **Feature Rich**: Supports most commonly used Office PPT elements and features, supports template-based AIPPT, supports exporting in various formats, and offers basic editing and previewing on mobile devices.
+4. **Controllable Code**: Not a temporary product of vibe coding. The code is robust, controllable, easy to maintain, and leaves no technical debt.
 
 
 # 👀 Front-Row Reminder
@@ -36,13 +37,13 @@
 
 
 # 🧩 Project Positioning
-> This project is strictly positioned as a Web Slide Editing/Presentation Application. It is not intended to be an ~~AI PPT generator, low-code platform, or image editor~~. The following are the recommendation levels for common use cases:
+> The core positioning of this project is a **Web Slide Editing/Presentation Application**. The following are the recommendation levels for common use cases:
 
-- **Low-code Platforms / H5 Editors / Image Editors / Whiteboards** (Recommendation: Not Recommended): We suggest choosing open-source projects specifically designed for those purposes.
-- **PPT File Preview Tool** (Recommendation: ⭐): The ability to import .pptx files is limited (roughly 70%~80% fidelity). Unless your requirements for preview accuracy are low and you only need basic content display, this is not recommended.
-- **AI PPT Generation Tool** (Recommendation: ⭐⭐): While the project provides basic template-based AI generation, it is not the core focus. As AI technology evolves (moving from templates to HTML-based or image-based generation), this project will not necessarily follow those trends. However, if you wish to build a template-based AI generator and are willing to implement your own generation logic, PPTist’s robust editing capabilities make it a strong foundation.
-- **Office PPT Authoring Tool** (Recommendation: ⭐⭐): PPTist supports many common Office features and basic .pptx export. However, exports are not 100% identical to the original, and as mentioned, import capabilities are limited. Choose this only if you can accept these limitations.
-- **Web Slide Editing/Presentation App** (Recommendation: ⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐): This is the primary use case. The core strengths of PPTist are its editing capabilities and user experience. You can build upon this project to customize or add unique nodes and features tailored to your specific needs, where Office compatibility is not the ultimate goal. **Summary: Our vision is for you to use PPTist to create a presentation product that is distinct from Microsoft Office, rather than just using it as a middleman for editing Office files.**
+- **Low-code Platforms / H5 Editors / Image Editors / Whiteboards** (Recommendation: Not Recommended): We suggest choosing open-source projects that better match those scenarios.
+- **AI PPT Generation Tool** (Recommendation: ⭐⭐): This project supports a template-based AIPPT generation approach, and also provides a data structure definition for AI to directly generate page data. See `AI_PPT_SCHEMA.md`. In theory, it supports non-template PPT generation, where AI directly generates PPTist data. Note that the final result of AIPPT depends heavily on model capabilities, prompt design, asset generation/retrieval, and other factors. PPTist is better suited as a foundation for carrying, editing, and further processing structured generation results, rather than an out-of-the-box complete AIPPT commercial solution.
+- **PPT File Preview Tool** (Recommendation: ⭐⭐): This project supports importing PPTX files and can cover many common page contents and styles (roughly 85%+ fidelity overall), making it suitable for online preview, lightweight review, and content browsing. However, because the PPTX ecosystem is complex, animations, special charts, deeply nested structures, non-standard elements, and some advanced styles may inevitably have fidelity differences. If your business requires pixel-perfect fidelity, evaluate with your actual sample files.
+- **Office PPT Authoring Tool** (Recommendation: ⭐⭐): This project supports many common Office PPT features and can import/export local PPTX files, making it usable as a foundation for online authoring and editing. Note that full Office PPT compatibility involves many details, including complex layouts, animations, charts, themes, and masters. Some details will inevitably be lost during file import/export, so 100% fidelity cannot be guaranteed. If your core goal is to fully replace Microsoft PowerPoint, evaluate and make trade-offs with your actual business documents.
+- **Web Slide Editing/Presentation App** (Recommendation: ⭐⭐⭐⭐⭐): This is the most recommended scenario. The core strengths of PPTist are its editing capabilities and editing experience. You can build upon this project to customize or add unique nodes and features according to your needs, without using import/export as the ultimate goal. After all, those customized things do not exist in Office PPT. **Summary: I hope you use PPTist to build a presentation product different from Office PPT, rather than just an editing relay station for Office PPT.**
 
 
 # 🚀 Installation
@@ -61,10 +62,9 @@ Browser access: http://127.0.0.1:5173/
 - History (undo, redo)
 - Shortcuts
 - Right-click menu
-- Export local files (PPTX, JSON, images, PDF)
-- Import and export pptist files
-- Print
-- AI PPT
+- Import: PPTX (overall fidelity ~85%+), JSON, pptist files
+- Export: PPTX (overall fidelity ~95%+), JSON, images, PDF (print), pptist files
+- Template-based AI PPT generation
 ### Slide Page Editing
 - Add/delete pages
 - Copy/paste pages
@@ -116,6 +116,8 @@ Browser access: http://127.0.0.1:5173/
 - Shadow
 - Transparency
 - Vertical text
+- Text box margins
+- Auto-fit/fixed height (vertical alignment can be selected when fixed)
 - AI Rewrite/Expand/Abbreviate
 #### Images
 - Crop (custom, shape, aspect ratio)
@@ -129,8 +131,9 @@ Browser access: http://127.0.0.1:5173/
 - Reset image
 - Set as background
 #### Shapes
-- Draw any polygon
-- Draw any line (unclosed shape simulation)
+- Freehand draw any polygon
+- Freehand draw any line (unclosed shape simulation)
+- Visual path creation method
 - Replace shape
 - Fill (solid color, gradient, image)
 - Border
@@ -139,6 +142,8 @@ Browser access: http://127.0.0.1:5173/
 - Flip
 - Shape format painter
 - Edit text (supports rich text, similar to text element’s rich text editing)
+- Text box margins
+- Text vertical alignment
 #### Lines
 - Straight lines, polylines, curves
 - Color
@@ -209,6 +214,19 @@ Here are some auxiliary development tools/repositories:
 # 📄 License
 [AGPL-3.0 License](https://github.com/pipipi-pikachu/PPTist/blob/master/LICENSE) | Copyright © 2020-PRESENT [pipipi-pikachu](https://github.com/pipipi-pikachu)
 
+
+# 💕 Sponsorship & Support
+Thank you for your interest in and support for PPTist! Sponsorships from companies, organizations, and individuals are welcome.
+
+### Corporate/Organization Sponsorship
+- Price: RMB 2,399 per quarter;
+- Benefits: A sponsor showcase in [README.md](/README.md), including your logo, link, and brief introduction;
+- If you are interested in sponsoring the project, please [email the author](mailto:pipipi_pikachu@163.com) first to confirm the showcase content, sponsorship period, and other details.
+
+### Individual Sponsorship
+Individuals can support the project directly through [Afdian](https://afdian.com/a/pipipi-pikachu). Thank you for your support!
+
+
 # 🧮 Commercial
 If you wish to use this project for commercial gain, I hope you will respect open source and strictly adhere to the AGPL-3.0 license, giving back to the open source community. Or contact the author for an independent commercial license.
 
@@ -217,6 +235,7 @@ If you wish to use this project for commercial gain, I hope you will respect ope
 
 
 # 🧮 商业用途
+## 商用须知
 - 本项目禁止闭源商用，如果你希望将其用于商业项目，请尊重开源，**严格遵循 [AGPL-3.0 协议](https://www.gnu.org/licenses/agpl-3.0.html)**，回馈开源社区；
 - 如果你因为任何原因，无法执行 AGPL-3.0 协议，可以选择：
     1. 使用 Apache 2.0 协议版本（最后更新时间为2022年5月，已停止维护，[点此下载](https://github.com/pipipi-pikachu/PPTist/archive/f1a35bb8e045124e37dcafd6acbf40b4531b69aa.zip)）；
@@ -225,7 +244,8 @@ If you wish to use this project for commercial gain, I hope you will respect ope
         - 你给本项目提交过重要的 PR 或 Issue（由作者主观判断，符合的 PR 或 Issue 会打上`important contribution`标签）；
     3. [邮件联系作者](mailto:pipipi_pikachu@163.com)付费获取独立的商业授权（违反协议后被作者找到的不适用此项）。独立授权价格：
         - 一年：2999元；
-        - 永久：5699元（不含税）；
+        - 永久：5999元（不含税）；
+    4. 一次性赞助本项目一年及以上（见[赞助与支持](#-赞助与支持)），可联系作者获取永久商业授权；
 - 请优先考虑执行AGPL-3.0协议，如需付费获取独立的商业授权，请务必在联系作者前阅读以下内容：
     - **独立商业授权表示**：
         - 作者单独出具商业授权协议文件（邮件联系作者获取），双方按流程签署协议；
@@ -247,17 +267,12 @@ If you wish to use this project for commercial gain, I hope you will respect ope
 - 作者倡导异步沟通（正式、信息整合度高），**不加私人微信/QQ/手机号等**，有任何授权相关疑问请邮件联系，谢谢理解；
 - 提需求/报bug/询问技术方案等非授权相关咨询，请在 [Issues](https://github.com/pipipi-pikachu/PPTist/issues) 中进行。
 
-
-# 🔔 其他说明
-## 什么是 AGPL-3.0 协议
-协议的核心要求用通俗的语言解释如下：
-- **开源义务**：如果你用了 AGPL 的代码，无论你或你的下游怎么使用/修改，都必须把你最终的代码全部完整公开出来（不只是给出修改的部分，也不是说换个框架重写一遍就能和原始代码脱离关系了），并继续以 AGPL 协议开源（强调：必须延续 AGPL 协议，保持开源的传染性，不能更换其他协议）。
+## AGPL-3.0 协议
+协议核心要求用通俗的语言解释如下：
+- **开源义务**：如果你用了 AGPL 的代码，无论你或你的下游怎么使用/修改，都必须把你最终的代码全部完整公开出来，并继续以 AGPL 协议开源（强调：必须延续 AGPL 协议，保持开源的传染性，不能更换其他协议）。
 - **网络服务也要开源**：即使你只是用 AGPL 的代码做了一个网站或网络服务，别人通过网络用你的服务时，你也需要遵守上一条**开源义务**。
 - **保留版权声明**：你不能删掉代码里原来的作者信息和许可证声明，得告诉大家这代码是从哪儿来的。
 - **不能加额外限制**：你不能在衍生出来的 AGPL 代码上加一些限制，比如不让别人再分发代码，或者要求别人付费才能使用代码（包括但不限于：要求别人购买授权/服务/产品等）。
 - **免责声明**：作者不保证代码没有 bug，也不对使用后果负责。
 
 > 详细协议内容见官方文档：[AGPL-3.0 协议](https://www.gnu.org/licenses/agpl-3.0.html)
-
-## 声明
-一些仓库基于本项目代码进行二次开发，但未遵守AGPL-3.0协议，擅自删除了AGPL-3.0协议许可证声明或改用其他协议，作者在此提醒：**这些仓库代码事实上仍受AGPL-3.0协议约束，切勿受其误导陷入侵权纠纷。**

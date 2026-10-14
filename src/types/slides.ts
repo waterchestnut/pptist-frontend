@@ -178,6 +178,10 @@ export type TextInset = [number, number, number, number]
  * textType?: 文本类型
  * 
  * inset?: 内边距（上、右、下、左），默认[10, 10, 10, 10]
+ *
+ * fixedHeight?: 固定文本框自适应轴尺寸，横排文本固定高度，竖排文本固定宽度
+ *
+ * vAlign?: 文本框内垂直对齐方向，仅fixedHeight为真时有效，默认top
  */
 export interface PPTTextElement extends PPTBaseElement {
   type: 'text'
@@ -194,6 +198,8 @@ export interface PPTTextElement extends PPTBaseElement {
   vertical?: boolean
   textType?: TextType
   inset?: TextInset
+  fixedHeight?: boolean
+  vAlign?: TextAlignVertical
 }
 
 
@@ -571,6 +577,8 @@ export interface TableTheme {
  * colWidths: 列宽数组，如[0.3, 0.5, 0.2]表示三列宽度分别占总宽度的30%, 50%, 20%
  * 
  * cellMinHeight: 单元格最小高度
+ *
+ * rowHeights?: 各行最小高度
  * 
  * data: 表格数据
  */
@@ -580,6 +588,7 @@ export interface PPTTableElement extends PPTBaseElement {
   theme?: TableTheme
   colWidths: number[]
   cellMinHeight: number
+  rowHeights?: number[]
   data: TableCell[][]
 }
 

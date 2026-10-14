@@ -59,8 +59,10 @@
             style="width: 190px;"
             v-model:value="model"
             :options="[
-              { label: 'GLM-4.7-Flash', value: 'glm-4.7-flash' },
-              { label: 'Doubao-Seed-1.6-Flash', value: 'doubao-seed-1.6-flash' },
+              { label: 'Qwen3.7-Flash', value: 'qwen:qwen3.7-flash' },
+              { label: 'Qwen3.8-Flash', value: 'qwen:qwen3.8-flash' },
+              { label: 'Doubao-Seed-2.0-mini', value: 'doubao:doubao-seed-2.0-mini' },
+              { label: 'DeepSeek-v4.1-Flash', value: 'qwen:deepseek-v4.1-flash' },
             ]"
           />
         </div>-->
@@ -170,7 +172,7 @@ const loading = ref(false)
 const outlineCreating = ref(false)
 const overwrite = ref(true)
 const step = ref<'setup' | 'outline' | 'template'>('setup')
-const model = ref('glm-4.7-flash')
+const model = ref('qwen:qwen3.7-flash')
 const outlineRef = useTemplateRef<HTMLElement>('outlineRef')
 const inputRef = useTemplateRef<InstanceType<typeof Input>>('inputRef')
 
@@ -207,10 +209,13 @@ const createOutline = async () => {
   loading.value = true
   outlineCreating.value = true
 
+  const [provider, _model] = model.value.split(':')
+
   /*const stream = await api.AIPPT_Outline({
     content: keyword.value,
     language: language.value,
-    model: model.value,
+    provider,
+    model: _model,
   })*/
   const stream = await genPPTSyllabusStream(keyword.value, language.value, materialFileInfo.value)
   if (stream.status === 500) {
@@ -258,11 +263,14 @@ const createPPT = async (template?: { slides: Slide[], theme: SlideTheme }) => {
 
   if (overwrite.value) resetSlides()
 
+  const [provider, _model] = model.value.split(':')
+
   /*const stream = await api.AIPPT({
     content: outline.value,
     language: language.value,
     style: style.value,
-    model: model.value,
+    provider,
+    model: _model,
   })*/
   const stream = await genPPTStream(outline.value, language.value, style.value, materialFileInfo.value, selectedTemplate.value)
 
@@ -270,7 +278,7 @@ const createPPT = async (template?: { slides: Slide[], theme: SlideTheme }) => {
     loading.value = false
     message.closeAll()
     mainStore.setAIPPTDialogState(true)
-    return message.error('该模型API的并发数过高，请更换其他模型重试')
+    return message.error('该模型不可用，请更换其他模型重试')
   }
 
   if (img.value === 'test') {
@@ -426,7 +434,7 @@ const updateMaterialFile = async (files: FileList) => {
     margin-bottom: 10px;
     padding-right: 5px;
     @include flex-grid-layout();
-
+  
     .template {
       border: 2px solid $borderColor;
       border-radius: $borderRadius;
@@ -435,7 +443,7 @@ const updateMaterialFile = async (files: FileList) => {
       &.selected {
         border-color: $themeColor;
       }
-
+  
       img {
         width: 100%;
         min-height: 175px;
@@ -530,7 +538,7 @@ const updateMaterialFile = async (files: FileList) => {
   .select-template {
     .templates {
       padding-right: 0;
-
+  
       .template {
         img {
           min-height: 60px;

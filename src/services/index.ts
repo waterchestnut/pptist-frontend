@@ -18,6 +18,7 @@ interface ImageSearchPayload {
 interface AIPPTOutlinePayload {
   content: string
   language: string
+  provider: string
   model: string
 }
 
@@ -25,6 +26,7 @@ interface AIPPTPayload {
   content: string
   language: string
   style: string
+  provider: string
   model: string
 }
 
@@ -43,10 +45,11 @@ export default {
   },
 
   AIPPT_Outline({
-                  content,
-                  language,
-                  model,
-                }: AIPPTOutlinePayload): Promise<any> {
+    content,
+    language,
+    provider,
+    model,
+  }: AIPPTOutlinePayload): Promise<any> {
     return fetch(`${SERVER_URL}/tools/aippt_outline`, {
       method: 'POST',
       headers: {
@@ -56,6 +59,7 @@ export default {
       body: JSON.stringify({
         content,
         language,
+        provider,
         model,
         stream: true,
       }),
@@ -63,11 +67,12 @@ export default {
   },
 
   AIPPT({
-          content,
-          language,
-          style,
-          model,
-        }: AIPPTPayload): Promise<any> {
+    content,
+    language,
+    style,
+    provider,
+    model,
+  }: AIPPTPayload): Promise<any> {
     return fetch(`${SERVER_URL}/tools/aippt`, {
       method: 'POST',
       headers: {
@@ -77,6 +82,7 @@ export default {
       body: JSON.stringify({
         content,
         language,
+        provider,
         model,
         style,
         stream: true,
@@ -85,9 +91,9 @@ export default {
   },
 
   AI_Writing({
-               content,
-               command,
-             }: AIWritingPayload): Promise<any> {
+    content,
+    command,
+  }: AIWritingPayload): Promise<any> {
     return fetch(`${SERVER_URL}/tools/ai_writing`, {
       method: 'POST',
       headers: {
@@ -97,7 +103,6 @@ export default {
       body: JSON.stringify({
         content,
         command,
-        model: 'glm-4.7-flash',
         stream: true,
       }),
     })
