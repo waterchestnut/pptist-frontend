@@ -26,3 +26,15 @@ export async function genPPTStream(syllabus: string, language: string, style: st
     }),
   })
 }
+
+/* AI直出模式：流式生成最终课件数据（不套模板）*/
+export function genPPTDirectStream(subject: string, language: string, fileInfo?: any): Promise<any> {
+  return fetch(`${SERVER_URL}/llm/gen-ppt-direct/stream`, {
+    method: 'POST',
+    headers: getDefaultHeaders(),
+    body: JSON.stringify({
+      subject,
+      options: {language, fileInfo},
+    }),
+  })
+}

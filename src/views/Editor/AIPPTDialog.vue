@@ -4,10 +4,64 @@
       <span class="title">AIPPT</span>
       <span class="subtite" v-if="step === 'template'">从下方挑选合适的模板生成PPT，或<span class="local" v-tooltip="'上传.pptist格式模板文件'" @click="uploadLocalTemplate()">使用本地模板生成</span></span>
       <span class="subtite" v-else-if="step === 'outline'">确认下方内容大纲（点击编辑内容，右键添加/删除大纲项），开始选择模板</span>
+      <span class="subtite" v-else-if="mode === 'direct'">AI 自动完成内容策划、版式设计与配图，直接生成成品课件，无需选模板</span>
       <span class="subtite" v-else>在下方输入您的PPT主题，并适当补充信息，如行业、岗位、学科、用途等</span>
     </div>
-    
-    <template v-if="step === 'setup'">
+
+    <div class="mode-tabs" v-if="step === 'setup'">
+      <div class="mode-tab" :class="{ 'active': mode === 'wizard' }" @click="switchMode('wizard')">向导模式（套模板）</div>
+      <div class="mode-tab" :class="{ 'active': mode === 'direct' }" @click="switchMode('direct')">AI 直出模式（专业）</div>
+    </div>
+
+    <template v-if="mode === 'direct' && step === 'setup'">
+      <Input class="input" 
+        ref="directInputRef"
+        v-model:value="keyword" 
+        :maxlength="50" 
+        placeholder="请输入课件主题，如：大学生职业生涯规划" 
+        @enter="createDirectPPT()"
+      >
+        <template #suffix>
+          <span class="count">{{ keyword.length }} / 50</span>
+          <div class="submit" type="primary" @click="createDirectPPT()"><i-icon-park-outline:send class="icon" /> AI 直出</div>
+        </template>
+      </Input>
+      <div class="recommends">
+        <div class="recommend" v-for="(item, index) in recommends" :key="index" @click="setKeyword(item)">{{ item }}</div>
+      </div>
+      <div class="configs">
+        <div class="config-item">
+          <div class="label">语言：</div>
+          <Select 
+            class="config-content"
+            style="width: 80px;"
+            v-model:value="language"
+            :options="[
+              { label: '中文', value: '中文' },
+              { label: '英文', value: 'English' },
+              { label: '日文', value: '日本語' },
+            ]"
+          />
+        </div>
+        <div class="config-item" v-if="!isEmptySlide">
+          <Checkbox v-model:value="overwrite">覆盖已有幻灯片</Checkbox>
+        </div>
+      </div>
+      <div class="configs">
+        <div class="config-item" style='flex-wrap: wrap'>
+          <div class="label">文本材料：</div>
+          <FileInput accept=".pdf,.doc,.docx,.xls,.xlsx,.html" @change="files => updateMaterialFile(files)">
+            <Button><IconUpload /> 上传文本材料</Button>
+          </FileInput>
+          <div class="label" style='margin-left: 12px'>{{materialFileInfo?.fileName}}</div>
+        </div>
+      </div>
+      <div class='header'>
+        <span class="subtite">AI 将自行思考设计符合 pptist 规范的课件：先做全局大纲与版式编排，再逐页生成最终页面，生成的页面会逐页出现在画布中，全程约需 2~5 分钟。支持上传 PDF、WORD、EXCEL、HTML 格式的文档作为内容材料。</span>
+      </div>
+    </template>
+
+    <template v-if="mode === 'wizard' && step === 'setup'">
       <Input class="input" 
         ref="inputRef"
         v-model:value="keyword" 
@@ -133,12 +187,14 @@
 <script lang="ts" setup>
 import { ref, onMounted, useTemplateRef } from 'vue'
 import { storeToRefs } from 'pinia'
+import { nanoid } from 'nanoid'
 import { jsonrepair } from 'jsonrepair'
 import api from '@/services'
-import {genPPTStream, genPPTSyllabusStream} from '@/services/llm'
+import {genPPTStream, genPPTSyllabusStream, genPPTDirectStream} from '@/services/llm'
 import useAIPPT from '@/hooks/useAIPPT'
 import useSlideHandler from '@/hooks/useSlideHandler'
-import type { AIPPTSlide } from '@/types/AIPPT'
+import useAddSlidesOrElements from '@/hooks/useAddSlidesOrElements'
+import type { AIPPTSlide, AIPPTDirectStreamLine } from '@/types/AIPPT'
 import type { Slide, SlideTheme } from '@/types/slides'
 import message from '@/utils/message'
 import { decrypt } from '@/utils/crypto'
@@ -161,7 +217,9 @@ const { templates } = storeToRefs(slidesStore)
 const { resetSlides, isEmptySlide } = useSlideHandler()
 const { AIPPT, presetImgPool, getMdContent } = useAIPPT()
 const {AIPPTPro} = useAIPPTPro()
+const { addSlidesFromData } = useAddSlidesOrElements()
 
+const mode = ref<'wizard' | 'direct'>('wizard')
 const language = ref('中文')
 const style = ref('通用')
 const img = ref('')
@@ -172,9 +230,11 @@ const loading = ref(false)
 const outlineCreating = ref(false)
 const overwrite = ref(true)
 const step = ref<'setup' | 'outline' | 'template'>('setup')
-const model = ref('qwen:qwen3.7-flash')
+const model = ref('glm-4.7-flash')
 const outlineRef = useTemplateRef<HTMLElement>('outlineRef')
 const inputRef = useTemplateRef<InstanceType<typeof Input>>('inputRef')
+const directInputRef = useTemplateRef<InstanceType<typeof Input>>('directInputRef')
+const directStarted = ref(false)
 
 const loadingTip = ref('')
 const materialFileInfo = ref()
@@ -194,13 +254,25 @@ const recommends = ref([
 
 onMounted(() => {
   setTimeout(() => {
-    inputRef.value!.focus()
+    focusInput()
   }, 500)
 })
 
+const focusInput = () => {
+  if (mode.value === 'direct') directInputRef.value?.focus()
+  else inputRef.value?.focus()
+}
+
 const setKeyword = (value: string) => {
   keyword.value = value
-  inputRef.value!.focus()
+  focusInput()
+}
+
+const switchMode = (value: 'wizard' | 'direct') => {
+  mode.value = value
+  step.value = 'setup'
+  outline.value = ''
+  setTimeout(() => focusInput(), 50)
 }
 
 const createOutline = async () => {
@@ -332,6 +404,116 @@ const createPPT = async (template?: { slides: Slide[], theme: SlideTheme }) => {
   readStream()
 }
 
+const sanitizeDirectTheme = (raw: any): Partial<SlideTheme> => {
+  const theme: Partial<SlideTheme> = {}
+  if (raw?.backgroundColor) theme.backgroundColor = raw.backgroundColor
+  if (Array.isArray(raw?.themeColors) && raw.themeColors.length) theme.themeColors = raw.themeColors
+  if (raw?.fontColor) theme.fontColor = raw.fontColor
+  if (typeof raw?.fontName === 'string') theme.fontName = raw.fontName
+  return theme
+}
+
+const sanitizeDirectSlide = (raw: any): Slide | null => {
+  if (!raw || typeof raw !== 'object' || !Array.isArray(raw.elements)) return null
+  const elements = raw.elements.filter((el: any) => el && typeof el.type === 'string' && Number.isFinite(el.left) && Number.isFinite(el.top))
+  if (!elements.length) return null
+  const slide: Slide = {
+    id: typeof raw.id === 'string' && raw.id ? raw.id : nanoid(10),
+    elements,
+  }
+  if (raw.background && (raw.background.type === 'solid' || raw.background.type === 'gradient')) {
+    slide.background = raw.background
+  }
+  return slide
+}
+
+const finishDirect = (errorMsg?: string) => {
+  loading.value = false
+  message.closeAll()
+  mainStore.setAIPPTDialogState(false)
+  if (errorMsg) message.error(errorMsg)
+  else message.success('AI直出完成：全部课件页面已生成')
+}
+
+const createDirectPPT = async () => {
+  if (!keyword.value) return message.error('请先输入PPT主题')
+
+  loading.value = true
+  directStarted.value = false
+  mainStore.setAIPPTDialogState('running')
+  message.loading('AI正在构思大纲与版式设计，请耐心等待 ...', { duration: 0 })
+
+  if (overwrite.value) resetSlides()
+
+  const stream = await genPPTDirectStream(keyword.value, language.value, materialFileInfo.value)
+  if (stream.status === 500) {
+    return finishDirect('AI服务异常，请稍后重试')
+  }
+  if (typeof stream === 'object' && stream.state === -1) {
+    return finishDirect('该模型API的并发数过高，请更换其他模型重试')
+  }
+
+  const reader: ReadableStreamDefaultReader = stream.body.getReader()
+  const decoder = new TextDecoder('utf-8')
+  let buffer = ''
+
+  const processLine = (chunk: string) => {
+    const text = chunk.replace('```jsonl', '').replace('```json', '').replace('```', '').trim()
+    if (!text) return
+    let line: AIPPTDirectStreamLine
+    try {
+      line = JSON.parse(jsonrepair(text))
+    }
+    catch (err) {
+      // eslint-disable-next-line
+      console.error(err)
+      return
+    }
+    switch (line.kind) {
+      case 'stage':
+        message.closeAll()
+        message.loading(line.message || 'AI正在直出课件，请耐心等待 ...', { duration: 0 })
+        break
+      case 'meta':
+        slidesStore.setTitle(line.title)
+        slidesStore.setTheme(sanitizeDirectTheme(line.theme))
+        break
+      case 'slide': {
+        const slide = sanitizeDirectSlide(line.data)
+        if (!slide) break
+        if (!directStarted.value && isEmptySlide.value) slidesStore.setSlides([slide])
+        else addSlidesFromData([slide])
+        directStarted.value = true
+        break
+      }
+      case 'error':
+        finishDirect(line.message || 'AI直出失败')
+        break
+      case 'done':
+        finishDirect()
+        break
+      default:
+        break
+    }
+  }
+
+  const readStream = () => {
+    reader.read().then(({ done, value }) => {
+      if (done) {
+        if (buffer.trim()) processLine(buffer)
+        if (loading.value) finishDirect('连接中断，部分页面可能缺失')
+        return
+      }
+      buffer += decoder.decode(value, { stream: true })
+      const lines = buffer.split(/\n+/)
+      buffer = lines.pop() || ''
+      for (const line of lines) processLine(line)
+      readStream()
+    })
+  }
+  readStream()
+}
+
 const uploadLocalTemplate = () => {
   const input = document.createElement('input')
   input.type = 'file'
@@ -397,6 +579,31 @@ const updateMaterialFile = async (files: FileList) => {
       color: $themeColor;
       text-decoration: underline;
       cursor: pointer;
+    }
+  }
+}
+.mode-tabs {
+  display: flex;
+  margin-bottom: 15px;
+
+  .mode-tab {
+    font-size: 13px;
+    padding: 5px 14px;
+    border: 1px solid $borderColor;
+    border-radius: 16px;
+    margin-right: 10px;
+    cursor: pointer;
+    color: #666;
+    transition: all 0.2s ease;
+
+    &:hover {
+      color: $themeColor;
+    }
+
+    &.active {
+      color: #fff;
+      background: linear-gradient(270deg, #d897fd, #33bcfc);
+      border-color: transparent;
     }
   }
 }
