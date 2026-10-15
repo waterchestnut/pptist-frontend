@@ -424,6 +424,9 @@ const sanitizeDirectSlide = (raw: any): Slide | null => {
   if (raw.background && (raw.background.type === 'solid' || raw.background.type === 'gradient')) {
     slide.background = raw.background
   }
+  if (Array.isArray(raw.animations) && raw.animations.length) slide.animations = raw.animations
+  if (typeof raw.turningMode === 'string') slide.turningMode = raw.turningMode as Slide['turningMode']
+  if (typeof raw.type === 'string') slide.type = raw.type as Slide['type']
   return slide
 }
 
