@@ -219,7 +219,7 @@ const { AIPPT, presetImgPool, getMdContent } = useAIPPT()
 const {AIPPTPro} = useAIPPTPro()
 const { addSlidesFromData } = useAddSlidesOrElements()
 
-const mode = ref<'wizard' | 'direct'>('wizard')
+const mode = ref<'wizard' | 'direct'>('direct')
 const language = ref('中文')
 const style = ref('通用')
 const img = ref('')
