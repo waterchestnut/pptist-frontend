@@ -58,6 +58,7 @@ export interface AIPPTDirectMetaLine {
   viewportSize: number
   viewportRatio: number
   total: number
+  traceCode?: string
 }
 
 export interface AIPPTDirectSlideLine {

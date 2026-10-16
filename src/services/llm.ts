@@ -16,13 +16,13 @@ export async function genPPTSyllabusStream(subject: string, language: string, fi
 }
 
 /* 流式生成PPT内容*/
-export async function genPPTStream(syllabus: string, language: string, style: string, fileInfo?: any, tmplCode?: string): Promise<any> {
+export async function genPPTStream(syllabus: string, language: string, style: string, fileInfo?: any, tmplCode?: string, traceCode?: string): Promise<any> {
   return fetch(`${SERVER_URL}/llm/gen-ppt/stream`, {
     method: 'POST',
     headers: getDefaultHeaders(),
     body: JSON.stringify({
       syllabus,
-      options: {language, style, fileInfo, tmplCode},
+      options: {language, style, fileInfo, tmplCode, traceCode},
     }),
   })
 }

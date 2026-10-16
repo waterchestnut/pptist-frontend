@@ -238,6 +238,12 @@ const directStarted = ref(false)
 
 const loadingTip = ref('')
 const materialFileInfo = ref()
+const wizardTraceCode = ref('')
+
+/* 保存本次AI生成过程记录的追踪码，课件保存时回传后端完成关联 */
+const saveGenerationTraceCode = (code?: string) => {
+  if (code) sessionStorage.setItem('pptGenerateTraceCode', code)
+}
 
 const recommends = ref([
   '2025科技前沿动态',
@@ -299,6 +305,8 @@ const createOutline = async () => {
     return message.error('该模型API的并发数过高，请更换其他模型重试')
   }
 
+  wizardTraceCode.value = (stream.headers && stream.headers.get('X-Trace-Code')) || ''
+
   loading.value = false
   step.value = 'outline'
 
@@ -344,7 +352,7 @@ const createPPT = async (template?: { slides: Slide[], theme: SlideTheme }) => {
     provider,
     model: _model,
   })*/
-  const stream = await genPPTStream(outline.value, language.value, style.value, materialFileInfo.value, selectedTemplate.value)
+  const stream = await genPPTStream(outline.value, language.value, style.value, materialFileInfo.value, selectedTemplate.value, wizardTraceCode.value)
 
   if (typeof stream === 'object' && stream.state === -1) {
     loading.value = false
@@ -373,6 +381,7 @@ const createPPT = async (template?: { slides: Slide[], theme: SlideTheme }) => {
         message.closeAll()
         mainStore.setAIPPTDialogState(false)
         slidesStore.setTheme(templateTheme)
+        saveGenerationTraceCode(wizardTraceCode.value)
         return
       }
 
@@ -481,6 +490,7 @@ const createDirectPPT = async () => {
       case 'meta':
         slidesStore.setTitle(line.title)
         slidesStore.setTheme(sanitizeDirectTheme(line.theme))
+        saveGenerationTraceCode((line as {traceCode?: string}).traceCode)
         break
       case 'slide': {
         const slide = sanitizeDirectSlide(line.data)

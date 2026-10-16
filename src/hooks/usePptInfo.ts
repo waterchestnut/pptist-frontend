@@ -34,6 +34,7 @@ export default () => {
     if (!pptCode) {
       return message.error(`非服务端创建的PPT，不能保存`, {duration: 5000, closable: true})
     }
+    const traceCode = sessionStorage.getItem('pptGenerateTraceCode') || undefined
     const ret = await pptInfoApi.savePptInfo({
       title: title.value,
       theme: theme.value,
@@ -43,8 +44,10 @@ export default () => {
       viewportRatio: viewportRatio.value,
       pptCode,
       firstSlideImgUrl: `/file/download/?fileCode=cover-${pptCode}`,
+      traceCode,
     })
     if (ret?.code === 0) {
+      if (traceCode) sessionStorage.removeItem('pptGenerateTraceCode')
       const now = new Date()
       message.info(`已保存，保存时间：${now.getHours()}时${now.getMinutes().toString().padStart(2, '0')}分${now.getSeconds().toString().padStart(2, '0')}秒`, {
         duration: 3000,
