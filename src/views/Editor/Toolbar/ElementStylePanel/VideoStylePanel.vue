@@ -80,7 +80,7 @@ const setVideoPosterFromFirstFrame = () => {
   })
 
   video.addEventListener('loadedmetadata', () => {
-    video!.requestVideoFrameCallback(() => {
+    const captureFrame = () => {
       canvas.width = video.videoWidth
       canvas.height = video.videoHeight
       ctx!.drawImage(video, 0, 0, canvas.width, canvas.height)
@@ -89,7 +89,14 @@ const setVideoPosterFromFirstFrame = () => {
       video.remove()
       canvas.remove()
       updateVideo({ poster })
-    })
+    }
+    /* Firefox 等不支持 requestVideoFrameCallback 时直接绘制 */
+    if (typeof video.requestVideoFrameCallback === 'function') {
+      video.requestVideoFrameCallback(captureFrame)
+    }
+    else {
+      captureFrame()
+    }
   }, { once: true })
 
   video.src = handleVideoElement.value.src

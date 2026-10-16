@@ -357,14 +357,21 @@ const autoHideController = () => {
 
 const bgCanvasRef = useTemplateRef<HTMLCanvasElement>('bgCanvasRef')
 onMounted(() => {
-  if (!bgCanvasRef.value || !videoRef.value) return
-  const ctx = bgCanvasRef.value.getContext('2d')
+  const video = videoRef.value
+  const bgCanvas = bgCanvasRef.value
+  if (!video || !bgCanvas) return
+  const ctx = bgCanvas.getContext('2d')
   if (!ctx) return
 
-  videoRef.value.addEventListener('loadedmetadata', () => {
-    videoRef.value!.requestVideoFrameCallback(() => {
-      ctx.drawImage(videoRef.value!, 0, 0, bgCanvasRef.value!.width, bgCanvasRef.value!.height)
-    })
+  const drawFrame = () => {
+    ctx.drawImage(video, 0, 0, bgCanvas.width, bgCanvas.height)
+  }
+  video.addEventListener('loadedmetadata', () => {
+    /* 用捕获的元素引用而非 ref（组件卸载后 ref 为 null）；Firefox 等无 requestVideoFrameCallback 时直接绘制 */
+    if (typeof video.requestVideoFrameCallback === 'function') {
+      video.requestVideoFrameCallback(drawFrame)
+    }
+    else drawFrame()
   }, { once: true })
 })
 
