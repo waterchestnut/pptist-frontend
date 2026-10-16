@@ -436,6 +436,7 @@ const sanitizeDirectSlide = (raw: any): Slide | null => {
   if (Array.isArray(raw.animations) && raw.animations.length) slide.animations = raw.animations
   if (typeof raw.turningMode === 'string') slide.turningMode = raw.turningMode as Slide['turningMode']
   if (typeof raw.type === 'string') slide.type = raw.type as Slide['type']
+  if (typeof raw.remark === 'string' && raw.remark.trim()) slide.remark = raw.remark.trim().slice(0, 500)
   return slide
 }
 
