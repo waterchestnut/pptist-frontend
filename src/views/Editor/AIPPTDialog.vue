@@ -463,6 +463,7 @@ const createDirectPPT = async () => {
   const processLine = (chunk: string) => {
     const text = chunk.replace('```jsonl', '').replace('```json', '').replace('```', '').trim()
     if (!text) return
+    if (text.startsWith(':')) return // SSE心跳注释行
     let line: AIPPTDirectStreamLine
     try {
       line = JSON.parse(jsonrepair(text))
