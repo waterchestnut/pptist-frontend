@@ -481,7 +481,20 @@ export default () => {
   }
 
   // 导出PPTX文件
-  const exportPPTX = (_slides: Slide[], masterOverwrite: boolean, ignoreMedia: boolean) => {
+  // pptxgenjs 要求视频封面(cover)必须是 base64 data URL；直出/AI生成的 poster 常为文件服务URL，需在导出前转换
+  const urlToBase64DataURL = async (url: string): Promise<string> => {
+    const res = await fetch(new URL(url, window.location.href).href)
+    if (!res.ok) throw new Error(`获取封面失败：${res.status}`)
+    const blob = await res.blob()
+    return await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(String(reader.result))
+      reader.onerror = () => reject(reader.error || new Error('读取封面失败'))
+      reader.readAsDataURL(blob)
+    })
+  }
+
+  const exportPPTX = async (_slides: Slide[], masterOverwrite: boolean, ignoreMedia: boolean) => {
     exporting.value = true
     const pptx = new pptxgen()
     setPPTXLayout(pptx)
@@ -983,7 +996,16 @@ export default () => {
             path: el.src,
             type: el.type,
           }
-          if (el.type === 'video' && el.poster) options.cover = el.poster
+          if (el.type === 'video' && el.poster) {
+            if (/^data:image\/(png|jpe?g);base64,/i.test(el.poster)) options.cover = el.poster
+            else {
+              try {
+                const coverData = await urlToBase64DataURL(el.poster)
+                if (/^data:image\/(png|jpe?g);base64,/i.test(coverData)) options.cover = coverData
+              }
+              catch { /* 封面转换失败降级为无封面，不阻塞导出 */ }
+            }
+          }
 
           const extMatch = el.src.match(/\.([a-zA-Z0-9]+)(?:[\?#]|$)/)
           if (extMatch && extMatch[1]) options.extn = extMatch[1]
