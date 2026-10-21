@@ -44,11 +44,13 @@ const userStore = useUserStore()
 const pptCode = getQueryParameter('pptCode')
 const isMock = getQueryParameter('isMock')
 const readonly = getQueryParameter('readonly')
+/* 嵌入iframe等场景可通过 noLeaveConfirm=1 关闭"离开此网站"确认提醒 */
+const noLeaveConfirm = getQueryParameter('noLeaveConfirm')
 
 const isAudienceMode = new URLSearchParams(window.location.search).get('mode') === 'audience'
 
 
-if (import.meta.env.MODE !== 'development') {
+if (import.meta.env.MODE !== 'development' && !noLeaveConfirm) {
   window.onbeforeunload = () => false
 }
 
