@@ -53,6 +53,23 @@ export default () => {
   // 动画执行状态
   const inAnimation = ref(false)
 
+  // 动画执行令牌：animationend 未触发（非法效果、元素被隐藏等）时兜底释放动画锁，避免放映卡死
+  let animRunToken = 0
+
+  // 页面切换动画进行中：切换未结束时忽略翻页输入，防止快速连点造成跨页漏播
+  const turning = ref(false)
+  let turningTimer: ReturnType<typeof setTimeout> | null = null
+  watch(slideIndex, () => {
+    turning.value = true
+    if (turningTimer) clearTimeout(turningTimer)
+    turningTimer = setTimeout(() => {
+      turning.value = false
+    }, 800)
+  })
+  onUnmounted(() => {
+    if (turningTimer) clearTimeout(turningTimer)
+  })
+
   // 最小已播放页面索引
   const playedSlidesMinIndex = ref(slideIndex.value)
 
@@ -66,6 +83,13 @@ export default () => {
 
     // 标记开始执行动画
     inAnimation.value = true
+
+    // 看门狗：超过预期时长仍未收到 animationend 时强制释放动画锁
+    const maxDuration = Math.max(1200, ...animations.map(a => a.duration || 1000))
+    const token = ++animRunToken
+    setTimeout(() => {
+      if (token === animRunToken && inAnimation.value) inAnimation.value = false
+    }, maxDuration + 1500)
 
     let endAnimationCount = 0
 
@@ -176,6 +200,8 @@ export default () => {
   // 向上播放遇到动画时，仅撤销到动画执行前的状态，不需要反向播放动画
   // 撤回到上一页时，若该页从未播放过（意味着不存在动画状态），需要将动画索引置为最小值（初始状态），否则置为最大值（最终状态）
   const execPrev = (broadcast = true) => {
+    // 页面切换动画进行中时忽略输入，防止快速连点连续跳页
+    if (turning.value) return
     if (broadcast) syncChannel?.postMessage({ type: 'EXEC_PREV' } as SyncMessage)
     if (formatedAnimations.value.length && animationIndex.value > 0) {
       revokeAnimation()
@@ -195,6 +221,8 @@ export default () => {
     inAnimation.value = false
   }
   const execNext = () => {
+    // 动画组播放中或页面切换中时忽略前进输入：修复最后一个动画组未播完点击即跳页、元素动画被跳过的问题
+    if (inAnimation.value || turning.value) return
     syncChannel?.postMessage({ type: 'EXEC_NEXT' } as SyncMessage)
     if (formatedAnimations.value.length && animationIndex.value < formatedAnimations.value.length) {
       runAnimation()
