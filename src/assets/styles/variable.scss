@@ -1,5 +1,15 @@
-$themeColor: #08979c;
-$themeHoverColor: lighten($themeColor, 8%);
+// 主题色机制件（docs/08 §13.3）：编译期静态值 → 运行期 CSS 变量
+// 色板烘焙在 /css/brand.css（public 根稳定 URL，容器启动按 APP_THEME 覆盖），兜底字面 = 缺省主题 brass（烫金铜）
+// 真源：cw2pc-workspace/brand/themes/；rgba 运算一律用 theme-rgba()，勿再写 rgba($themeColor,…)
+$themeColor: var(--brand-primary, #916E40);
+$themeHoverColor: var(--brand-primary-hover, #9E855F);
+
+// sass 色彩函数的替代：原 rgba($themeColor, α) 一律改 theme-rgba(α)；
+// 色彩换算固化在打包期（--brand-primary-rgb 三元组由 sync-brand.mjs 生成），运行期零色彩计算
+@function theme-rgba($alpha) {
+  @return unquote("rgba(var(--brand-primary-rgb), #{$alpha})");
+}
+
 $textColor: #41464b;
 $borderColor: #e5e7eb;
 $lightGray: #f9f9f9;

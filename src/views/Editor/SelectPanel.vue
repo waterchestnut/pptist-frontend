@@ -226,16 +226,16 @@ const close = () => {
   cursor: pointer;
 
   &.active {
-    background-color: rgba($color: $themeColor, $alpha: .1);
+    background-color: theme-rgba(.1);
   }
   &.group-active {
-    background-color: rgba($color: $themeColor, $alpha: .2);
+    background-color: theme-rgba(.2);
   }
   &.lock {
     cursor: default;
   }
   &:not(.lock):hover {
-    background-color: rgba($color: $themeColor, $alpha: .25);
+    background-color: theme-rgba(.25);
     transition: background-color $transitionDelay;
   }
 

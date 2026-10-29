@@ -421,7 +421,7 @@ const contextmenusThumbnailItem = (): ContextmenuItem[] => {
 
   .thumbnail {
     border-radius: $borderRadius;
-    outline: 2px solid rgba($color: $themeColor, $alpha: .15);
+    outline: 2px solid theme-rgba(.15);
   }
 
   &.active {
@@ -453,7 +453,7 @@ const contextmenusThumbnailItem = (): ContextmenuItem[] => {
     left: 8px;
     top: 13px;
     font-size: 8px;
-    background-color: rgba($color: $themeColor, $alpha: .75);
+    background-color: theme-rgba(.75);
     color: #fff;
     text-align: center;
     line-height: 12px;
@@ -467,7 +467,7 @@ const contextmenusThumbnailItem = (): ContextmenuItem[] => {
       top: 10px;
       left: 4px;
       border: 4px solid transparent;
-      border-top-color: rgba($color: $themeColor, $alpha: .75);
+      border-top-color: theme-rgba(.75);
     }
   }
 }

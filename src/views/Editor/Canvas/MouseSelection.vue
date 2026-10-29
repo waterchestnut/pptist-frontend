@@ -22,7 +22,7 @@ defineProps<{
 <style lang="scss" scoped>
 .mouse-selection {
   position: absolute;
-  background-color: rgba($themeColor, 0.1);
+  background-color: theme-rgba(0.1);
   border: 1px solid $themeColor;
   z-index: 200;
 

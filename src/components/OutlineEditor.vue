@@ -264,7 +264,7 @@ const contextmenus = (el: HTMLElement): ContextmenuItem[] => {
       color: $themeColor;
 
       .text {
-        background-color: rgba($color: $themeColor, $alpha: .08);
+        background-color: theme-rgba(.08);
       }
     }
 
@@ -295,7 +295,7 @@ const contextmenus = (el: HTMLElement): ContextmenuItem[] => {
     @include ellipsis-oneline();
 
     &:hover {
-      background-color: rgba($color: $themeColor, $alpha: .08);
+      background-color: theme-rgba(.08);
     }
   }
   .flag {
@@ -316,7 +316,7 @@ const contextmenus = (el: HTMLElement): ContextmenuItem[] => {
       height: 100%;
       position: absolute;
       left: 50%;
-      background-color: rgba($color: $themeColor, $alpha: .1);
+      background-color: theme-rgba(.1);
     }
     &::after {
       content: '';

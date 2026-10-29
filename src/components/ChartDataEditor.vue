@@ -455,7 +455,7 @@ table {
     height: 32px;
 
     &.head {
-      background-color: rgba($color: $themeColor, $alpha: .08);
+      background-color: theme-rgba(.08);
     }
   }
   .item {

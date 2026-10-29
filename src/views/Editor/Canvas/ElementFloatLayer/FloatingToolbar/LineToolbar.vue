@@ -126,7 +126,7 @@ const updateLine = (props: Partial<PPTLineElement>) => {
   cursor: pointer;
 
   &:hover {
-    background-color: rgba($color: $themeColor, $alpha: .05);
+    background-color: theme-rgba(.05);
   }
   &.active {
     color: $themeColor;

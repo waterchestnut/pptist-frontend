@@ -257,7 +257,7 @@ const handleWritingEnd = () => {
       color: $themeColor;
     }
     &.active {
-      background-color: rgba($color: $themeColor, $alpha: .5);
+      background-color: theme-rgba(.5);
       color: #fff;
     }
     &.close {

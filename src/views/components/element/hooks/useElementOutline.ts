@@ -5,7 +5,8 @@ import type { PPTElementOutline } from '@/types/slides'
 export default (outline: Ref<PPTElementOutline | undefined>) => {
   const outlineWidth = computed(() => outline.value?.width ?? 0)
   const outlineStyle = computed(() => outline.value?.style || 'solid')
-  const outlineColor = computed(() => outline.value?.color || '#08979c')
+  // 默认描边色取缺省主题烘焙字面（该值会进入元素数据并参与导出，刻意不用 var()，docs/08 §13.3 红线）
+  const outlineColor = computed(() => outline.value?.color || '#916E40')
 
   const strokeDashArray = computed(() => {
     const size = outlineWidth.value

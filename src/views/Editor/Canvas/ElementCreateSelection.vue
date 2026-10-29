@@ -16,7 +16,7 @@
       >
 				<path
           :d="lineData.path" 
-          stroke="#08979c"
+          :style="{ stroke: 'var(--brand-primary, #916E40)' }"
           fill="none" 
           stroke-width="2" 
         ></path>

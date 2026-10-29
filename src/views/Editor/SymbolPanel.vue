@@ -132,7 +132,7 @@ const close = () => {
 
       &.active {
         color: $themeColor;
-        background-color: rgba($color: $themeColor, $alpha:.05);
+        background-color: theme-rgba(.05);
         font-weight: 700;
       }
 

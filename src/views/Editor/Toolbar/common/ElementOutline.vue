@@ -121,7 +121,7 @@ const toggleOutline = (checked: boolean) => {
   border-radius: $borderRadius;
 
   &:not(.selected):hover {
-    background-color: rgba($color: $themeColor, $alpha: .05);
+    background-color: theme-rgba(.05);
     cursor: pointer;
   }
 

@@ -108,7 +108,7 @@ const markerSize = computed(() => {
     position: absolute;
     top: 0;
     bottom: 0;
-    background-color: rgba($color: $themeColor, $alpha: .1);
+    background-color: theme-rgba(.1);
   }
 
   .ruler-marker-100 {
@@ -158,7 +158,7 @@ const markerSize = computed(() => {
     position: absolute;
     left: 0;
     right: 0;
-    background-color: rgba($color: $themeColor, $alpha: .1);
+    background-color: theme-rgba(.1);
   }
 
   .ruler-marker-100 {

@@ -58,6 +58,14 @@ export default defineConfig(({command, mode}) => {
     RESOURCE_API_BASE='${env.RESOURCE_API_BASE || 'http://localhost:12007'}';
     /*资源平台地址*/
     RESOURCE_PLATFORM_BASE='${env.RESOURCE_PLATFORM_BASE || 'http://localhost:11007'}';
+    /*部署级品牌 env：CW2PC_* 占位符由容器启动 99-modify-config.sh 按 Deployment env 替换（docs/08 §13.3）*/
+    APP_TITLE='${env.APP_TITLE || 'CW2PC_APP_TITLE'}';
+    APP_LOGO='${env.APP_LOGO || 'CW2PC_APP_LOGO'}';
+    APP_THEME='${env.APP_THEME || 'CW2PC_APP_THEME'}';
+    document.addEventListener('DOMContentLoaded', function () {
+      var t = window.APP_TITLE;
+      if (typeof t === 'string' && t && !t.startsWith('CW2PC_')) document.title = t;
+    });
     `,
               },
             ]

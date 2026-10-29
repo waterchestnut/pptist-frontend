@@ -133,7 +133,7 @@ td {
   border: 1px solid #dcdcdc;
 
   &.active {
-    background-color: rgba($color: $themeColor, $alpha: .1);
+    background-color: theme-rgba(.1);
     border-color: $themeColor;
   }
 }

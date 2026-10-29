@@ -126,7 +126,7 @@ const isPureWhiteColor = (color?: string) => {
   }
 
   &.active {
-    background-color: rgba($color: $themeColor, $alpha: .12);
+    background-color: theme-rgba(.12);
     color: $themeColor;
   }
 }
