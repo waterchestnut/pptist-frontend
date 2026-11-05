@@ -20,6 +20,25 @@ export const enum ShapePathFormulasKeys {
   INDICATOR = 'indicator',
   DONUT = 'donut',
   DIAGSTRIPE = 'diagStripe',
+  ARROW_UP = 'arrowUp',
+  ARROW_DOWN = 'arrowDown',
+  ARROW_LEFT = 'arrowLeft',
+  ARROW_RIGHT = 'arrowRight',
+  ARROW_UP_DOWN = 'arrowUpDown',
+  ARROW_LEFT_RIGHT = 'arrowLeftRight',
+  CHEVRON_RIGHT = 'chevronRight',
+  CHEVRON_LEFT = 'chevronLeft',
+  PENTAGON_RIGHT = 'pentagonRight',
+  PENTAGON_LEFT = 'pentagonLeft',
+  DART_RIGHT = 'dartRight',
+  DART_LEFT = 'dartLeft',
+  STAR_4 = 'star4',
+  STAR_5 = 'star5',
+  STAR_6 = 'star6',
+  STAR_8 = 'star8',
+  HEXAGON = 'hexagon',
+  HEXAGON_VERTICAL = 'hexagonVertical',
+  OCTAGON = 'octagon',
 }
 
 export const enum ElementTypes {
@@ -398,6 +417,13 @@ export interface PPTShapeElement extends PPTBaseElement {
 export type LinePoint = '' | 'arrow' | 'dot' 
 export type Broken2LineDirection = 'horizontal' | 'vertical'
 
+export type LineConnectionAnchor = 'top' | 'right' | 'bottom' | 'left'
+
+export interface LineBinding {
+  elementId: string
+  anchor: LineConnectionAnchor
+}
+
 /**
  * 线条元素
  * 
@@ -429,6 +455,8 @@ export interface PPTLineElement extends Omit<PPTBaseElement, 'height' | 'rotate'
   type: 'line'
   start: [number, number]
   end: [number, number]
+  startBinding?: LineBinding
+  endBinding?: LineBinding
   style: LineStyleType
   color: string
   points: [LinePoint, LinePoint]
@@ -725,6 +753,7 @@ export interface SlideBackground {
 
 
 export type TurningMode = 'no' | 'fade' | 'slideX' | 'slideY' | 'random' | 'slideX3D' | 'slideY3D' | 'rotate' | 'scaleY' | 'scaleX' | 'scale' | 'scaleReverse'
+  | 'wipeX' | 'wipeY' | 'circle' | 'diamond' | 'slideDiagonal' | 'slideDiagonalReverse' | 'revealX' | 'revealY' | 'flipY' | 'flipX'
 
 export interface NoteReply {
   id: string
