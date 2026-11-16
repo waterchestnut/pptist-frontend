@@ -64,38 +64,6 @@ export function getAccessToken() {
   return searchParams.get('accessToken') || getCookie('param-accessToken') || '';
 }
 
-/** 由当前 host 推导父域(registrable domain): resource.xxzx.paretop.net → .paretop.net;
- *  resource-online.foleac.net → .foleac.net; localhost/IP/两段主机不提升(开发环境) */
-function sharedCookieDomain(): string {
-  const parts = window.location.hostname.split('.');
-  if (parts.length < 3 || !/^[a-zA-Z]{2,}$/.test(parts[parts.length - 1])) return '';
-  return '.' + parts.slice(-2).join('.');
-}
-
-/**
- * 登录态共享提升（2026-11 跨子系统 URL token 凭证专项）：
- * 把 URL 直链 token 或历史 host-only cookie 提升写入父域共享 cookie，
- * 使跨 console 跳转（window.open / same-site iframe，如资源推荐弹层）不再于 URL 携带 accessToken。
- * 父域按当前 host 自动推导（多环境：paretop.net / foleac.net 等）；顶层窗口才写（iframe/wujie 上下文由宿主页面负责登录态）。
- */
-export function promoteSharedCookie() {
-  try {
-    const domain = sharedCookieDomain();
-    if (!domain) return;
-    if (window.self !== window.top) return;
-    const searchParams = new URLSearchParams(window.location.search);
-    const token = searchParams.get('accessToken') || getCookie('param-accessToken');
-    if (!token) return;
-    document.cookie = `param-accessToken=${encodeURIComponent(token)}; path=/; domain=${domain}`;
-  } catch {
-    /* 隐私模式/域限制等场景静默降级 */
-  }
-}
-// 2026-11-16 启动提升停用(§8.2 决策轮): 父域 cookie 已由服务端 oauth callback/grant-cookie
-// 权威下发; 前端"末两段"推导在 paretop 环境会另种过宽域(.paretop.net, 实际部署显式域为
-// .xxzx.paretop.net), 是两层父域漂移与 cw2pc 征用的复活的来源。恢复: 放开下一行。
-// promoteSharedCookie();
-
 /**
  * 父域共享 cookie 多候选清除（同步自 xxzx ucenter.console 2026-11-16 修复）：
  * 部署侧显式 cookieDomain（如三段 .xxzx.paretop.net）与"末两段"推导可能漂移，
