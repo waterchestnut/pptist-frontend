@@ -91,7 +91,10 @@ export function promoteSharedCookie() {
     /* 隐私模式/域限制等场景静默降级 */
   }
 }
-promoteSharedCookie();
+// 2026-11-16 启动提升停用(§8.2 决策轮): 父域 cookie 已由服务端 oauth callback/grant-cookie
+// 权威下发; 前端"末两段"推导在 paretop 环境会另种过宽域(.paretop.net, 实际部署显式域为
+// .xxzx.paretop.net), 是两层父域漂移与 cw2pc 征用的复活的来源。恢复: 放开下一行。
+// promoteSharedCookie();
 
 /**
  * 父域共享 cookie 多候选清除（同步自 xxzx ucenter.console 2026-11-16 修复）：
