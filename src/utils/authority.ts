@@ -116,7 +116,7 @@ function clearSharedAuthCookies() {
 export function toLogin() {
   // 先请服务端按权威口径清登录 cookie（fire-and-forget 不阻塞跳转；
   // 旧链路只走 /logout 仅重定向不清 cookie，导致父域旧 token 存活）
-  fetch('/client-proxy/oauth/sign-out', {method: 'GET', credentials: 'include'}).catch(() => {});
+  fetch('/client-proxy/oauth/sign-out', {method: 'GET', credentials: 'include', keepalive: true}).catch(() => {});
   setCookie('param-accessToken', '', -1, '');
   clearSharedAuthCookies();
   delCache(userCacheKey);
