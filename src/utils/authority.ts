@@ -93,13 +93,32 @@ export function promoteSharedCookie() {
 }
 promoteSharedCookie();
 
+/**
+ * 父域共享 cookie 多候选清除（同步自 xxzx ucenter.console 2026-11-16 修复）：
+ * 部署侧显式 cookieDomain（如三段 .xxzx.paretop.net）与"末两段"推导可能漂移，
+ * 单一推导域删除会空转；对 末两段/剥首段 两级候选域 + host-only 幂等删除。
+ */
+function clearSharedAuthCookies() {
+  const parts = window.location.hostname.split('.');
+  const candidates: string[] = [];
+  if (parts.length >= 3 && /^[a-zA-Z]{2,}$/.test(parts[parts.length - 1])) {
+    candidates.push('.' + parts.slice(-2).join('.'));
+    if (parts.length >= 4) candidates.push('.' + parts.slice(1).join('.'));
+  }
+  for (const d of [...new Set(candidates)]) {
+    try {
+      document.cookie = 'param-accessToken=; path=/; domain=' + d + '; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+      document.cookie = 'param-refreshToken=; path=/; domain=' + d + '; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+    } catch {}
+  }
+}
+
 export function toLogin() {
+  // 先请服务端按权威口径清登录 cookie（fire-and-forget 不阻塞跳转；
+  // 旧链路只走 /logout 仅重定向不清 cookie，导致父域旧 token 存活）
+  fetch('/client-proxy/oauth/sign-out', {method: 'GET', credentials: 'include'}).catch(() => {});
   setCookie('param-accessToken', '', -1, '');
-  // 同步清除父域共享 cookie（凭证专项；历史 host-only 与共享域并存）
-  try {
-    const d = sharedCookieDomain();
-    if (d) document.cookie = 'param-accessToken=; path=/; domain=' + d + '; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-  } catch {}
+  clearSharedAuthCookies();
   delCache(userCacheKey);
   window.location.href =
     '/client-proxy/oauth/logout?retUrl=' + encodeURIComponent(window.location.href);
